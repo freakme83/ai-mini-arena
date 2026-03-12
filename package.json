@@ -1,0 +1,13 @@
+{
+  "name": "ai-mini-arena",
+  "version": "0.1.0",
+  "type": "commonjs",
+  "scripts": {
+    "match": "ts-node src/runner/runMatch.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}
