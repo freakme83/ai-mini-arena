@@ -1,8 +1,10 @@
 export type Action =
   | "light_attack"
   | "heavy_attack"
+  | "poke"
   | "guard_break"
   | "block"
+  | "retreat_guard"
   | "dash_forward"
   | "dash_back"
   | "rest";

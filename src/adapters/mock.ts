@@ -7,8 +7,10 @@ function pickRandom<T>(items: T[]): T {
 const STAMINA_COST: Record<Action, number> = {
   light_attack: 6,
   heavy_attack: 14,
+  poke: 4,
   guard_break: 8,
-  block: 2,
+  block: 3,
+  retreat_guard: 5,
   dash_forward: 4,
   dash_back: 4,
   rest: 0,
@@ -137,10 +139,24 @@ export class AggroBot implements BotAdapter {
       };
     }
 
+    if (input.context.selfLowStamina && canAttack && affordable.includes("poke")) {
+      return {
+        action: "poke",
+        reasoning: "Low stamina in range, using a cheap poke to keep pressure.",
+      };
+    }
+
     if (input.context.selfLowStamina && canAttack && affordable.includes("block")) {
       return {
         action: "block",
         reasoning: "Low stamina in range, defending instead of taking a risky rest.",
+      };
+    }
+
+    if (input.context.selfLowStamina && !canAttack && affordable.includes("retreat_guard")) {
+      return {
+        action: "retreat_guard",
+        reasoning: "Low stamina and out of range, retreating while staying guarded.",
       };
     }
 
@@ -226,6 +242,18 @@ export class TurtleBot implements BotAdapter {
 
     if (
       !opponentCanGuardBreak &&
+      (input.context.selfLowHp || input.context.opponentAggressiveStreak >= 2) &&
+      canAttack &&
+      affordable.includes("retreat_guard")
+    ) {
+      return {
+        action: "retreat_guard",
+        reasoning: "Disengaging under pressure while keeping guard up.",
+      };
+    }
+
+    if (
+      !opponentCanGuardBreak &&
       (input.context.selfLowHp ||
         input.context.opponentAggressiveStreak >= 1 ||
         canAttack) &&
@@ -235,6 +263,13 @@ export class TurtleBot implements BotAdapter {
       return {
         action: "block",
         reasoning: "Prioritizing defense under pressure while guard-break risk looks manageable.",
+      };
+    }
+
+    if (canAttack && input.context.selfLowStamina && affordable.includes("poke")) {
+      return {
+        action: "poke",
+        reasoning: "Using a low-commitment poke while stamina is limited.",
       };
     }
 
@@ -325,11 +360,29 @@ export class BalancedBot implements BotAdapter {
     if (
       input.context.selfLowStamina &&
       canAttack &&
+      affordable.includes("poke")
+    ) {
+      return {
+        action: "poke",
+        reasoning: "Low stamina in range, using a quick poke instead of over-committing.",
+      };
+    }
+
+    if (
+      input.context.selfLowStamina &&
+      canAttack &&
       affordable.includes("block")
     ) {
       return {
         action: "block",
         reasoning: "Low stamina in range, choosing defense over a punishable rest.",
+      };
+    }
+
+    if (input.context.selfLowHp && !canAttack && affordable.includes("retreat_guard")) {
+      return {
+        action: "retreat_guard",
+        reasoning: "Low HP and out of range, backing off while guarded.",
       };
     }
 
