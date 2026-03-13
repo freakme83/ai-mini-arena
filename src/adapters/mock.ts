@@ -4,17 +4,17 @@ function pickRandom<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function isAffordable(action: Action, stamina: number): boolean {
-  const staminaCosts: Record<Action, number> = {
-    light_attack: 6,
-    heavy_attack: 12,
-    block: 3,
-    dash_forward: 4,
-    dash_back: 4,
-    rest: 0,
-  };
+const STAMINA_COST: Record<Action, number> = {
+  light_attack: 6,
+  heavy_attack: 12,
+  block: 3,
+  dash_forward: 4,
+  dash_back: 4,
+  rest: 0,
+};
 
-  return stamina >= staminaCosts[action];
+function isAffordable(action: Action, stamina: number): boolean {
+  return stamina >= STAMINA_COST[action];
 }
 
 function getAffordableActions(input: ModelInput): Action[] {
@@ -23,9 +23,11 @@ function getAffordableActions(input: ModelInput): Action[] {
   );
 }
 
-function isCloseEnoughToAttack(input: ModelInput): boolean {
+function inAttackRange(input: ModelInput): boolean {
   return input.self.position >= 0;
 }
+
+const REST_ONLY: Action[] = ["rest"];
 
 export class RandomBot implements BotAdapter {
   name: string;
@@ -36,10 +38,10 @@ export class RandomBot implements BotAdapter {
 
   async getAction(input: ModelInput): Promise<ActionDecision> {
     const affordable = getAffordableActions(input);
-    const action = affordable.length > 0 ? pickRandom(affordable) : "rest";
+    const pool: Action[] = affordable.length > 0 ? affordable : REST_ONLY;
 
     return {
-      action,
+      action: pickRandom(pool),
       reasoning: "Random valid action selected.",
     };
   }
@@ -54,40 +56,41 @@ export class AggroBot implements BotAdapter {
 
   async getAction(input: ModelInput): Promise<ActionDecision> {
     const affordable = getAffordableActions(input);
-    const canAttack = isCloseEnoughToAttack(input);
+    const canAttack = inAttackRange(input);
 
     if (canAttack && affordable.includes("heavy_attack")) {
       return {
         action: "heavy_attack",
-        reasoning: "In range and enough stamina for maximum pressure.",
+        reasoning: "In range with stamina for heavy attack.",
       };
     }
 
     if (canAttack && affordable.includes("light_attack")) {
       return {
         action: "light_attack",
-        reasoning: "In range and applying steady pressure.",
+        reasoning: "Applying pressure with light attack.",
       };
     }
 
     if (!canAttack && affordable.includes("dash_forward")) {
       return {
         action: "dash_forward",
-        reasoning: "Closing distance to enable attacks.",
+        reasoning: "Closing distance to attack.",
       };
     }
 
-    if (affordable.includes("rest") && input.self.stamina < 6) {
+    if (input.self.stamina < 6 && affordable.includes("rest")) {
       return {
         action: "rest",
         reasoning: "Recovering stamina to continue aggression.",
       };
     }
 
-    const fallbackPool = affordable.length > 0 ? affordable : ["rest"];
+    const pool: Action[] = affordable.length > 0 ? affordable : REST_ONLY;
+
     return {
-      action: pickRandom(fallbackPool),
-      reasoning: "Fallback valid action selected.",
+      action: pickRandom(pool),
+      reasoning: "Fallback aggressive decision.",
     };
   }
 }
@@ -101,42 +104,41 @@ export class TurtleBot implements BotAdapter {
 
   async getAction(input: ModelInput): Promise<ActionDecision> {
     const affordable = getAffordableActions(input);
-    const opponentCanLikelyAttack = input.opponent.position >= 0;
-    const lowHp = input.self.hp <= 35;
-    const lowStamina = input.self.stamina <= 8;
+    const opponentThreat = input.opponent.position >= 0;
 
-    if (lowStamina && affordable.includes("rest")) {
+    if (input.self.stamina <= 8 && affordable.includes("rest")) {
       return {
         action: "rest",
         reasoning: "Low stamina, prioritizing recovery.",
       };
     }
 
-    if ((opponentCanLikelyAttack || lowHp) && affordable.includes("block")) {
+    if (opponentThreat && affordable.includes("block")) {
       return {
         action: "block",
-        reasoning: "Expecting pressure and choosing safety.",
+        reasoning: "Expecting incoming attack.",
       };
     }
 
-    if (affordable.includes("dash_back") && input.self.position > -2) {
+    if (affordable.includes("dash_back")) {
       return {
         action: "dash_back",
-        reasoning: "Creating space to reduce risk.",
+        reasoning: "Creating distance for safety.",
       };
     }
 
-    if (isCloseEnoughToAttack(input) && affordable.includes("light_attack")) {
+    if (inAttackRange(input) && affordable.includes("light_attack")) {
       return {
         action: "light_attack",
-        reasoning: "Taking a safe, low-risk attack opportunity.",
+        reasoning: "Safe opportunistic attack.",
       };
     }
 
-    const fallbackPool = affordable.length > 0 ? affordable : ["rest"];
+    const pool: Action[] = affordable.length > 0 ? affordable : REST_ONLY;
+
     return {
-      action: pickRandom(fallbackPool),
-      reasoning: "Fallback defensive action selected.",
+      action: pickRandom(pool),
+      reasoning: "Fallback defensive decision.",
     };
   }
 }
@@ -150,57 +152,59 @@ export class BalancedBot implements BotAdapter {
 
   async getAction(input: ModelInput): Promise<ActionDecision> {
     const affordable = getAffordableActions(input);
-    const canAttack = isCloseEnoughToAttack(input);
-    const lowHp = input.self.hp <= 30;
-    const lowStamina = input.self.stamina <= 8;
-    const opponentLowHp = input.opponent.hp <= 20;
+
+    const lowHp = input.self.hp < 30;
+    const lowStamina = input.self.stamina < 8;
+    const canAttack = inAttackRange(input);
+    const opponentLowHp = input.opponent.hp < 20;
 
     if (lowStamina && affordable.includes("rest")) {
       return {
         action: "rest",
-        reasoning: "Recovering stamina before committing.",
+        reasoning: "Recovering stamina.",
       };
     }
 
     if (lowHp && affordable.includes("block")) {
       return {
         action: "block",
-        reasoning: "Low HP, prioritizing survival.",
+        reasoning: "Low HP, prioritizing defense.",
       };
     }
 
     if (canAttack && opponentLowHp && affordable.includes("heavy_attack")) {
       return {
         action: "heavy_attack",
-        reasoning: "Attempting a high-damage finish.",
+        reasoning: "Attempting finishing move.",
       };
     }
 
     if (canAttack && affordable.includes("light_attack")) {
       return {
         action: "light_attack",
-        reasoning: "Maintaining balanced offensive pressure.",
+        reasoning: "Maintaining balanced pressure.",
       };
     }
 
     if (!canAttack && affordable.includes("dash_forward")) {
       return {
         action: "dash_forward",
-        reasoning: "Moving into effective range.",
+        reasoning: "Moving into attack range.",
       };
     }
 
     if (affordable.includes("block")) {
       return {
         action: "block",
-        reasoning: "Defaulting to safe defense.",
+        reasoning: "Default safe option.",
       };
     }
 
-    const fallbackPool = affordable.length > 0 ? affordable : ["rest"];
+    const pool: Action[] = affordable.length > 0 ? affordable : REST_ONLY;
+
     return {
-      action: pickRandom(fallbackPool),
-      reasoning: "Fallback balanced action selected.",
+      action: pickRandom(pool),
+      reasoning: "Fallback balanced decision.",
     };
   }
 }
