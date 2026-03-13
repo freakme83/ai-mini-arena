@@ -22,14 +22,14 @@ export const MAX_POSITION = 2;
 
 /**
  * Damage reduction applied when defending with block.
- * 0.85 means 85% of incoming damage is reduced.
+ * 0.75 means 75% of incoming damage is reduced.
  */
-export const BLOCK_DAMAGE_REDUCTION = 0.85;
+export const BLOCK_DAMAGE_REDUCTION = 0.75;
 
 /**
  * Extra stamina penalty applied to an attacker when a heavy attack is blocked.
  */
-export const BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY = 4;
+export const BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY = 2;
 
 /**
  * Extra damage taken by a resting player if hit this round.
@@ -65,7 +65,7 @@ export const ACTION_RULES: Record<Action, ActionRule> = {
     baseDamage: 0,
     requiresCloseRange: false,
     movement: 0,
-    staminaGain: 2,
+    staminaGain: 1,
   },
   dash_forward: {
     staminaCost: 4,
