@@ -135,3 +135,24 @@ implement arena engine
 add mock bots
 
 run first simulated matches
+
+## Observer Debug UI (Phase 1)
+
+A static spectator/debug page is available under `observer/`.
+
+### Preview locally
+
+Because the observer uses `fetch()` to load mock timeline JSON, serve the repo with any static server, for example:
+
+```bash
+python3 -m http.server 4173
+```
+
+Then open:
+
+- `http://localhost:4173/observer/`
+
+### Deployment
+
+This page is static-deploy friendly (Netlify/GitHub Pages style deploy).
+It has no framework/runtime dependency and reads timeline data from `observer/data/mock-match-timeline.json`.
