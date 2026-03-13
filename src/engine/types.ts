@@ -76,15 +76,24 @@ export interface PerspectiveRoundSummary {
 
 export interface ModelContext {
   inRange: boolean;
+  inCloseRange: boolean;
+  inMidRange: boolean;
+  inFarRange: boolean;
   selfLowHp: boolean;
   opponentLowHp: boolean;
   selfLowStamina: boolean;
   opponentLowStamina: boolean;
+  selfExhausted: boolean;
+  opponentExhausted: boolean;
   opponentResting: boolean;
   opponentBlocking: boolean;
+  opponentGuardingPattern: boolean;
+  opponentRestingPattern: boolean;
   opponentAggressiveStreak: number;
   opponentDefensiveStreak: number;
   selfRepeatedBlockCount: number;
+  selfLastActions: Action[];
+  opponentLastActions: Action[];
 }
 
 export interface ModelInput {
