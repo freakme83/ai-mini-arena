@@ -25,7 +25,13 @@ export const MAX_POSITION = 2;
  * Damage reduction applied when defending with block.
  * 0.75 means 75% of incoming damage is reduced.
  */
-export const BLOCK_DAMAGE_REDUCTION = 0.75;
+export const BLOCK_DAMAGE_REDUCTION = 0.65;
+
+/**
+ * Flat chip damage that still applies when an attack is blocked.
+ * Keeps block useful, but prevents pure block loops from being too safe.
+ */
+export const BLOCK_CHIP_DAMAGE = 2;
 
 /**
  * Extra stamina penalty applied to an attacker when a heavy attack is blocked.
@@ -35,7 +41,13 @@ export const BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY = 2;
 /**
  * Extra damage taken by a resting player if hit this round.
  */
-export const RESTING_DAMAGE_BONUS = 4;
+export const RESTING_DAMAGE_BONUS = 8;
+
+/**
+ * Extra damage applied when a fighter is hit while at/near exhaustion.
+ */
+export const EXHAUSTION_DAMAGE_BONUS = 4;
+export const EXHAUSTION_STAMINA_THRESHOLD = 2;
 
 /**
  * Guard break is designed to punish repeated blocking.
@@ -76,7 +88,7 @@ export const ACTION_RULES: Record<Action, ActionRule> = {
     staminaGain: 0,
   },
   block: {
-    staminaCost: 2,
+    staminaCost: 3,
     baseDamage: 0,
     requiresCloseRange: false,
     movement: 0,

@@ -245,7 +245,7 @@ export class TurtleBot implements BotAdapter {
       };
     }
 
-    if (!canAttack && affordable.includes("dash_back") && input.self.position > -1) {
+    if (!canAttack && affordable.includes("dash_back")) {
       return {
         action: "dash_back",
         reasoning: "Creating more space to reduce immediate danger.",

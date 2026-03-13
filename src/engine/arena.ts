@@ -10,8 +10,11 @@ import {
 import {
   ALLOWED_ACTIONS,
   ACTION_RULES,
+  BLOCK_CHIP_DAMAGE,
   BLOCK_DAMAGE_REDUCTION,
   BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY,
+  EXHAUSTION_DAMAGE_BONUS,
+  EXHAUSTION_STAMINA_THRESHOLD,
   GUARD_BREAK_BONUS_DAMAGE,
   GUARD_BREAK_STAMINA_BREAK,
   MAX_ROUNDS,
@@ -172,9 +175,12 @@ function calculateDamageTaken(params: {
 
   if (defenderAction === "block") {
     const reducedDamage = Math.round(rawDamage * (1 - BLOCK_DAMAGE_REDUCTION));
-    notes.push(`${attackerAction} was partially blocked.`);
+    const blockedDamage = Math.max(BLOCK_CHIP_DAMAGE, reducedDamage + BLOCK_CHIP_DAMAGE);
+    notes.push(
+      `${attackerAction} was partially blocked but still dealt ${BLOCK_CHIP_DAMAGE} chip damage.`
+    );
     return {
-      damage: reducedDamage,
+      damage: blockedDamage,
       wasBlocked: true,
       wasMissed: false,
       brokeGuard: false,
@@ -261,6 +267,26 @@ function applyRestingDamageBonus(params: {
       `Resting target took +${RESTING_DAMAGE_BONUS} bonus damage due to vulnerability.`
     );
     return incomingDamage + RESTING_DAMAGE_BONUS;
+  }
+
+  return incomingDamage;
+}
+
+function applyExhaustionDamageBonus(params: {
+  defender: PlayerState;
+  incomingDamage: number;
+  notes: string[];
+}): number {
+  const { defender, incomingDamage, notes } = params;
+
+  if (
+    defender.stamina <= EXHAUSTION_STAMINA_THRESHOLD &&
+    incomingDamage > 0
+  ) {
+    notes.push(
+      `Exhausted target took +${EXHAUSTION_DAMAGE_BONUS} bonus damage.`
+    );
+    return incomingDamage + EXHAUSTION_DAMAGE_BONUS;
   }
 
   return incomingDamage;
@@ -377,15 +403,23 @@ export function resolveRound(
     distance: distanceAfterMovement,
   });
 
-  const damageToPlayer2 = applyRestingDamageBonus({
-    defenderAction: p2EffectiveAction,
-    incomingDamage: p1AttackResult.damage,
+  const damageToPlayer2 = applyExhaustionDamageBonus({
+    defender: nextPlayer2,
+    incomingDamage: applyRestingDamageBonus({
+      defenderAction: p2EffectiveAction,
+      incomingDamage: p1AttackResult.damage,
+      notes: p1AttackResult.notes,
+    }),
     notes: p1AttackResult.notes,
   });
 
-  const damageToPlayer1 = applyRestingDamageBonus({
-    defenderAction: p1EffectiveAction,
-    incomingDamage: p2AttackResult.damage,
+  const damageToPlayer1 = applyExhaustionDamageBonus({
+    defender: nextPlayer1,
+    incomingDamage: applyRestingDamageBonus({
+      defenderAction: p1EffectiveAction,
+      incomingDamage: p2AttackResult.damage,
+      notes: p2AttackResult.notes,
+    }),
     notes: p2AttackResult.notes,
   });
 
