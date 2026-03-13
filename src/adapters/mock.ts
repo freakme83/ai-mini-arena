@@ -24,23 +24,7 @@ function getAffordableActions(input: ModelInput): Action[] {
 }
 
 function inAttackRange(input: ModelInput): boolean {
-  return input.self.position >= 0;
-}
-
-function opponentWasAggressive(input: ModelInput): boolean {
-  return (
-    input.opponent.lastAction === "light_attack" ||
-    input.opponent.lastAction === "heavy_attack" ||
-    input.opponent.lastAction === "dash_forward"
-  );
-}
-
-function opponentWasDefensive(input: ModelInput): boolean {
-  return (
-    input.opponent.lastAction === "block" ||
-    input.opponent.lastAction === "dash_back" ||
-    input.opponent.lastAction === "rest"
-  );
+  return input.context.inRange;
 }
 
 const REST_ONLY: Action[] = ["rest"];
@@ -73,28 +57,52 @@ export class AggroBot implements BotAdapter {
   async getAction(input: ModelInput): Promise<ActionDecision> {
     const affordable = getAffordableActions(input);
     const canAttack = inAttackRange(input);
-    const opponentBlocked = input.opponent.lastAction === "block";
-    const opponentResting = input.opponent.lastAction === "rest";
-    const lowStamina = input.self.stamina <= 7;
 
-    if (canAttack && opponentResting && affordable.includes("heavy_attack")) {
+    if (canAttack && input.context.opponentResting && affordable.includes("heavy_attack")) {
       return {
         action: "heavy_attack",
         reasoning: "Punishing a resting opponent with maximum pressure.",
       };
     }
 
-    if (canAttack && opponentBlocked && affordable.includes("light_attack")) {
+    if (
+      canAttack &&
+      input.context.opponentBlocking &&
+      affordable.includes("light_attack")
+    ) {
       return {
         action: "light_attack",
-        reasoning: "Opponent blocked last turn, so using lighter pressure instead of a risky heavy attack.",
+        reasoning: "Opponent blocked last turn, so switching to lighter pressure.",
+      };
+    }
+
+    if (
+      input.context.opponentDefensiveStreak >= 2 &&
+      !canAttack &&
+      affordable.includes("dash_forward")
+    ) {
+      return {
+        action: "dash_forward",
+        reasoning: "Opponent has been defensive for multiple rounds, so closing distance to keep pressure.",
+      };
+    }
+
+    if (
+      input.context.opponentDefensiveStreak >= 3 &&
+      input.context.selfLowStamina &&
+      affordable.includes("rest") &&
+      !canAttack
+    ) {
+      return {
+        action: "rest",
+        reasoning: "Opponent is in a defensive loop, taking a safe stamina reset.",
       };
     }
 
     if (
       canAttack &&
       affordable.includes("heavy_attack") &&
-      !opponentBlocked &&
+      !input.context.opponentBlocking &&
       input.self.stamina >= 18
     ) {
       return {
@@ -117,17 +125,17 @@ export class AggroBot implements BotAdapter {
       };
     }
 
-    if (lowStamina && !canAttack && affordable.includes("rest")) {
+    if (input.context.selfLowStamina && canAttack && affordable.includes("block")) {
       return {
-        action: "rest",
-        reasoning: "Recovering stamina while outside immediate attack range.",
+        action: "block",
+        reasoning: "Low stamina in range, defending instead of taking a risky rest.",
       };
     }
 
-    if (lowStamina && canAttack && affordable.includes("block")) {
+    if (input.context.selfLowStamina && !canAttack && affordable.includes("rest")) {
       return {
-        action: "block",
-        reasoning: "Temporarily defending instead of taking a vulnerable rest in range.",
+        action: "rest",
+        reasoning: "Recovering stamina outside immediate danger.",
       };
     }
 
@@ -150,21 +158,19 @@ export class TurtleBot implements BotAdapter {
   async getAction(input: ModelInput): Promise<ActionDecision> {
     const affordable = getAffordableActions(input);
     const canAttack = inAttackRange(input);
-    const lowHp = input.self.hp <= 35;
-    const lowStamina = input.self.stamina <= 8;
-    const opponentLowStamina = input.opponent.stamina <= 8;
-    const opponentResting = input.opponent.lastAction === "rest";
-    const opponentRecentlyBlocked = input.opponent.lastAction === "block";
-    const opponentAggressive = opponentWasAggressive(input);
 
-    if (canAttack && opponentResting && affordable.includes("heavy_attack")) {
+    if (canAttack && input.context.opponentResting && affordable.includes("heavy_attack")) {
       return {
         action: "heavy_attack",
         reasoning: "Punishing a resting opponent.",
       };
     }
 
-    if (canAttack && opponentLowStamina && affordable.includes("light_attack")) {
+    if (
+      canAttack &&
+      input.context.opponentLowStamina &&
+      affordable.includes("light_attack")
+    ) {
       return {
         action: "light_attack",
         reasoning: "Taking initiative against a tired opponent.",
@@ -172,24 +178,46 @@ export class TurtleBot implements BotAdapter {
     }
 
     if (
+      input.context.selfRepeatedBlockCount >= 2 &&
+      !input.context.opponentAggressiveStreak &&
       canAttack &&
-      opponentRecentlyBlocked &&
       affordable.includes("light_attack")
     ) {
       return {
         action: "light_attack",
-        reasoning: "Testing offense after the opponent played defensively.",
+        reasoning: "Breaking my own block loop with a measured attack.",
       };
     }
 
-    if (lowStamina && !canAttack && affordable.includes("rest")) {
+    if (
+      input.context.selfRepeatedBlockCount >= 2 &&
+      !canAttack &&
+      affordable.includes("dash_back")
+    ) {
+      return {
+        action: "dash_back",
+        reasoning: "Breaking repetitive blocking by creating distance.",
+      };
+    }
+
+    if (
+      input.context.selfLowStamina &&
+      !canAttack &&
+      affordable.includes("rest")
+    ) {
       return {
         action: "rest",
         reasoning: "Recovering stamina while safely out of range.",
       };
     }
 
-    if ((lowHp || opponentAggressive || canAttack) && affordable.includes("block")) {
+    if (
+      (input.context.selfLowHp ||
+        input.context.opponentAggressiveStreak >= 1 ||
+        canAttack) &&
+      affordable.includes("block") &&
+      input.context.selfRepeatedBlockCount < 2
+    ) {
       return {
         action: "block",
         reasoning: "Prioritizing defense under pressure or while in range.",
@@ -203,7 +231,7 @@ export class TurtleBot implements BotAdapter {
       };
     }
 
-    if (!canAttack && affordable.includes("dash_forward") && opponentLowStamina) {
+    if (!canAttack && input.context.opponentLowStamina && affordable.includes("dash_forward")) {
       return {
         action: "dash_forward",
         reasoning: "Re-entering range against a weakened opponent.",
@@ -217,7 +245,7 @@ export class TurtleBot implements BotAdapter {
       };
     }
 
-    if (lowStamina && affordable.includes("rest")) {
+    if (input.context.selfLowStamina && affordable.includes("rest")) {
       return {
         action: "rest",
         reasoning: "Recovering stamina because no better defensive option is available.",
@@ -244,75 +272,93 @@ export class BalancedBot implements BotAdapter {
     const affordable = getAffordableActions(input);
     const canAttack = inAttackRange(input);
 
-    const lowHp = input.self.hp <= 30;
-    const lowStamina = input.self.stamina <= 8;
-    const opponentLowHp = input.opponent.hp <= 22;
-    const opponentLowStamina = input.opponent.stamina <= 8;
-    const opponentResting = input.opponent.lastAction === "rest";
-    const opponentBlocking = input.opponent.lastAction === "block";
-    const opponentAggressive = opponentWasAggressive(input);
-    const opponentDefensive = opponentWasDefensive(input);
-
-    if (canAttack && opponentResting && affordable.includes("heavy_attack")) {
+    if (canAttack && input.context.opponentResting && affordable.includes("heavy_attack")) {
       return {
         action: "heavy_attack",
         reasoning: "Capitalizing on a resting opponent.",
       };
     }
 
-    if (lowStamina && !canAttack && affordable.includes("rest")) {
+    if (
+      input.context.selfLowStamina &&
+      !canAttack &&
+      affordable.includes("rest")
+    ) {
       return {
         action: "rest",
         reasoning: "Recovering stamina while outside immediate danger.",
       };
     }
 
-    if (lowStamina && canAttack && affordable.includes("block")) {
+    if (
+      input.context.selfLowStamina &&
+      canAttack &&
+      affordable.includes("block")
+    ) {
       return {
         action: "block",
         reasoning: "Low stamina in range, choosing defense over a punishable rest.",
       };
     }
 
-    if (lowHp && affordable.includes("block")) {
+    if (input.context.selfLowHp && affordable.includes("block")) {
       return {
         action: "block",
         reasoning: "Low HP, prioritizing survival.",
       };
     }
 
-    if (canAttack && opponentLowHp && affordable.includes("heavy_attack")) {
+    if (
+      canAttack &&
+      input.context.opponentLowHp &&
+      affordable.includes("heavy_attack")
+    ) {
       return {
         action: "heavy_attack",
         reasoning: "Attempting to close out the fight.",
       };
     }
 
-    if (canAttack && opponentLowStamina && affordable.includes("light_attack")) {
+    if (
+      canAttack &&
+      input.context.opponentLowStamina &&
+      affordable.includes("light_attack")
+    ) {
       return {
         action: "light_attack",
         reasoning: "Applying safe pressure to a tired opponent.",
       };
     }
 
-    if (opponentAggressive && affordable.includes("block")) {
+    if (
+      input.context.opponentAggressiveStreak >= 2 &&
+      affordable.includes("block")
+    ) {
       return {
         action: "block",
-        reasoning: "Adapting to recent aggression with a defensive response.",
+        reasoning: "Opponent has been aggressively chaining actions, so defending for a counter window.",
       };
     }
 
-    if (canAttack && opponentBlocking && affordable.includes("light_attack")) {
-      return {
-        action: "light_attack",
-        reasoning: "Using lighter pressure after the opponent showed a defensive tendency.",
-      };
-    }
-
-    if (!canAttack && opponentDefensive && affordable.includes("dash_forward")) {
+    if (
+      input.context.opponentDefensiveStreak >= 2 &&
+      !canAttack &&
+      affordable.includes("dash_forward")
+    ) {
       return {
         action: "dash_forward",
-        reasoning: "Stepping in because the opponent appears defensive or passive.",
+        reasoning: "Opponent is playing defensively, so stepping in to seize tempo.",
+      };
+    }
+
+    if (
+      input.context.opponentDefensiveStreak >= 2 &&
+      canAttack &&
+      affordable.includes("light_attack")
+    ) {
+      return {
+        action: "light_attack",
+        reasoning: "Using lighter pressure to probe a defensive opponent.",
       };
     }
 
