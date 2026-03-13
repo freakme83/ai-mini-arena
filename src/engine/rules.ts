@@ -20,8 +20,22 @@ export const MAX_ROUNDS = 20;
 export const MIN_POSITION = -2;
 export const MAX_POSITION = 2;
 
-export const BLOCK_DAMAGE_REDUCTION = 0.7;
-export const PASSIVE_ROUND_LIMIT = 3;
+/**
+ * Damage reduction applied when defending with block.
+ * 0.85 means 85% of incoming damage is reduced.
+ */
+export const BLOCK_DAMAGE_REDUCTION = 0.85;
+
+/**
+ * Extra stamina penalty applied to an attacker when a heavy attack is blocked.
+ */
+export const BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY = 4;
+
+/**
+ * Extra damage taken by a resting player if hit this round.
+ * Rest should be useful, but punishable.
+ */
+export const RESTING_DAMAGE_BONUS = 4;
 
 export interface ActionRule {
   staminaCost: number;
@@ -40,18 +54,18 @@ export const ACTION_RULES: Record<Action, ActionRule> = {
     staminaGain: 0,
   },
   heavy_attack: {
-    staminaCost: 12,
-    baseDamage: 20,
+    staminaCost: 14,
+    baseDamage: 22,
     requiresCloseRange: true,
     movement: 0,
     staminaGain: 0,
   },
   block: {
-    staminaCost: 3,
+    staminaCost: 2,
     baseDamage: 0,
     requiresCloseRange: false,
     movement: 0,
-    staminaGain: 0,
+    staminaGain: 2,
   },
   dash_forward: {
     staminaCost: 4,
