@@ -3,6 +3,7 @@ import { Action } from "./types";
 export const ALLOWED_ACTIONS: Action[] = [
   "light_attack",
   "heavy_attack",
+  "guard_break",
   "block",
   "dash_forward",
   "dash_back",
@@ -33,9 +34,16 @@ export const BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY = 2;
 
 /**
  * Extra damage taken by a resting player if hit this round.
- * Rest should be useful, but punishable.
  */
 export const RESTING_DAMAGE_BONUS = 4;
+
+/**
+ * Guard break is designed to punish repeated blocking.
+ * It deals modest damage normally, but becomes meaningfully stronger
+ * when it hits a blocking opponent.
+ */
+export const GUARD_BREAK_BONUS_DAMAGE = 8;
+export const GUARD_BREAK_STAMINA_BREAK = 6;
 
 export interface ActionRule {
   staminaCost: number;
@@ -56,6 +64,13 @@ export const ACTION_RULES: Record<Action, ActionRule> = {
   heavy_attack: {
     staminaCost: 14,
     baseDamage: 22,
+    requiresCloseRange: true,
+    movement: 0,
+    staminaGain: 0,
+  },
+  guard_break: {
+    staminaCost: 8,
+    baseDamage: 6,
     requiresCloseRange: true,
     movement: 0,
     staminaGain: 0,
@@ -103,7 +118,11 @@ export function isInRange(position: number): boolean {
 }
 
 export function isAttack(action: Action): boolean {
-  return action === "light_attack" || action === "heavy_attack";
+  return (
+    action === "light_attack" ||
+    action === "heavy_attack" ||
+    action === "guard_break"
+  );
 }
 
 export function isMovement(action: Action): boolean {
