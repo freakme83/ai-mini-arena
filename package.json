@@ -1,13 +1,16 @@
 {
   "name": "ai-mini-arena",
   "version": "0.1.0",
+  "description": "Minimal arena simulator where AI models compete by making decisions under identical rules.",
+  "private": true,
   "type": "commonjs",
   "scripts": {
-    "match": "ts-node src/runner/runMatch.ts"
+    "match": "ts-node src/runner/runMatch.ts",
+    "tournament": "ts-node src/runner/runTournament.ts"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^22.7.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "typescript": "^5.6.3"
   }
 }
