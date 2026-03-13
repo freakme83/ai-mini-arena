@@ -12,6 +12,8 @@ import {
   ACTION_RULES,
   BLOCK_DAMAGE_REDUCTION,
   BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY,
+  GUARD_BREAK_BONUS_DAMAGE,
+  GUARD_BREAK_STAMINA_BREAK,
   MAX_ROUNDS,
   MAX_STAMINA,
   RESTING_DAMAGE_BONUS,
@@ -85,20 +87,63 @@ function calculateDamageTaken(params: {
   attackerAction: Action;
   defenderAction: Action;
   attackerPosition: number;
-}): { damage: number; wasBlocked: boolean; wasMissed: boolean; notes: string[] } {
+}): {
+  damage: number;
+  wasBlocked: boolean;
+  wasMissed: boolean;
+  brokeGuard: boolean;
+  notes: string[];
+} {
   const { attackerAction, defenderAction, attackerPosition } = params;
   const notes: string[] = [];
 
   if (!isAttack(attackerAction)) {
-    return { damage: 0, wasBlocked: false, wasMissed: false, notes };
+    return {
+      damage: 0,
+      wasBlocked: false,
+      wasMissed: false,
+      brokeGuard: false,
+      notes,
+    };
   }
 
   if (!isInRange(attackerPosition)) {
     notes.push(`${attackerAction} missed because attacker was out of range.`);
-    return { damage: 0, wasBlocked: false, wasMissed: true, notes };
+    return {
+      damage: 0,
+      wasBlocked: false,
+      wasMissed: true,
+      brokeGuard: false,
+      notes,
+    };
   }
 
   const rawDamage = calculateRawDamage(attackerAction);
+
+  if (attackerAction === "guard_break") {
+    if (defenderAction === "block") {
+      const damage = rawDamage + GUARD_BREAK_BONUS_DAMAGE;
+      notes.push(
+        `guard_break punished block for ${damage} damage and will apply stamina break.`
+      );
+      return {
+        damage,
+        wasBlocked: false,
+        wasMissed: false,
+        brokeGuard: true,
+        notes,
+      };
+    }
+
+    notes.push(`guard_break connected without finding a block to punish.`);
+    return {
+      damage: rawDamage,
+      wasBlocked: false,
+      wasMissed: false,
+      brokeGuard: false,
+      notes,
+    };
+  }
 
   if (defenderAction === "block") {
     const reducedDamage = Math.round(rawDamage * (1 - BLOCK_DAMAGE_REDUCTION));
@@ -107,6 +152,7 @@ function calculateDamageTaken(params: {
       damage: reducedDamage,
       wasBlocked: true,
       wasMissed: false,
+      brokeGuard: false,
       notes,
     };
   }
@@ -115,6 +161,7 @@ function calculateDamageTaken(params: {
     damage: rawDamage,
     wasBlocked: false,
     wasMissed: false,
+    brokeGuard: false,
     notes,
   };
 }
@@ -152,6 +199,27 @@ function applyBlockedHeavyAttackPenalty(params: {
     );
     notes.push(
       `Blocked heavy attack caused an extra ${BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY} stamina penalty.`
+    );
+  }
+}
+
+function applyGuardBreakStaminaBreak(params: {
+  defender: PlayerState;
+  attackerAction: Action;
+  defenderAction: Action;
+  brokeGuard: boolean;
+  notes: string[];
+}): void {
+  const { defender, attackerAction, defenderAction, brokeGuard, notes } = params;
+
+  if (
+    attackerAction === "guard_break" &&
+    defenderAction === "block" &&
+    brokeGuard
+  ) {
+    defender.stamina = Math.max(0, defender.stamina - GUARD_BREAK_STAMINA_BREAK);
+    notes.push(
+      `Guard was broken for an extra ${GUARD_BREAK_STAMINA_BREAK} stamina loss.`
     );
   }
 }
@@ -298,6 +366,22 @@ export function resolveRound(
     attacker: nextPlayer2,
     attackerAction: p2EffectiveAction,
     wasBlocked: p2AttackResult.wasBlocked,
+    notes: p2AttackResult.notes,
+  });
+
+  applyGuardBreakStaminaBreak({
+    defender: nextPlayer2,
+    attackerAction: p1EffectiveAction,
+    defenderAction: p2EffectiveAction,
+    brokeGuard: p1AttackResult.brokeGuard,
+    notes: p1AttackResult.notes,
+  });
+
+  applyGuardBreakStaminaBreak({
+    defender: nextPlayer1,
+    attackerAction: p2EffectiveAction,
+    defenderAction: p1EffectiveAction,
+    brokeGuard: p2AttackResult.brokeGuard,
     notes: p2AttackResult.notes,
   });
 
