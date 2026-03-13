@@ -50,6 +50,7 @@ export function createInitialArenaState(
     player2,
     distance: Math.abs(player1.position - player2.position),
     allowedActions: ALLOWED_ACTIONS,
+    roundHistory: [],
   };
 }
 
@@ -64,9 +65,7 @@ function resolveAffordableAction(
   const notes: string[] = [];
 
   if (!canAffordAction(chosenAction, player.stamina)) {
-    notes.push(
-      `Not enough stamina for ${chosenAction}; fallback to rest applied.`
-    );
+    notes.push(`Not enough stamina for ${chosenAction}; fallback to rest applied.`);
     return { effectiveAction: "rest", notes };
   }
 
@@ -273,13 +272,13 @@ export function resolveRound(
     attackerPosition: nextPlayer2.position,
   });
 
-  let damageToPlayer2 = applyRestingDamageBonus({
+  const damageToPlayer2 = applyRestingDamageBonus({
     defenderAction: p2EffectiveAction,
     incomingDamage: p1AttackResult.damage,
     notes: p1AttackResult.notes,
   });
 
-  let damageToPlayer1 = applyRestingDamageBonus({
+  const damageToPlayer1 = applyRestingDamageBonus({
     defenderAction: p1EffectiveAction,
     incomingDamage: p2AttackResult.damage,
     notes: p2AttackResult.notes,
@@ -306,20 +305,6 @@ export function resolveRound(
   nextPlayer2.lastAction = p2EffectiveAction;
 
   const distance = Math.abs(nextPlayer1.position - nextPlayer2.position);
-
-  const nextState: ArenaState = {
-    round: currentState.round + 1,
-    maxRounds: currentState.maxRounds,
-    status: "ongoing",
-    player1: nextPlayer1,
-    player2: nextPlayer2,
-    distance,
-    allowedActions: ALLOWED_ACTIONS,
-  };
-
-  if (isMatchFinished(nextState)) {
-    nextState.status = "finished";
-  }
 
   const player1Resolved = buildResolvedAction({
     player: nextPlayer1,
@@ -360,6 +345,21 @@ export function resolveRound(
     distanceAfter: distance,
     summary: `${nextPlayer1.name} used ${p1EffectiveAction}, ${nextPlayer2.name} used ${p2EffectiveAction}.`,
   };
+
+  const nextState: ArenaState = {
+    round: currentState.round + 1,
+    maxRounds: currentState.maxRounds,
+    status: "ongoing",
+    player1: nextPlayer1,
+    player2: nextPlayer2,
+    distance,
+    allowedActions: ALLOWED_ACTIONS,
+    roundHistory: [...currentState.roundHistory, roundLog],
+  };
+
+  if (isMatchFinished(nextState)) {
+    nextState.status = "finished";
+  }
 
   return { nextState, roundLog };
 }
