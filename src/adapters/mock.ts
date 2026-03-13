@@ -7,6 +7,7 @@ function pickRandom<T>(items: T[]): T {
 const STAMINA_COST: Record<Action, number> = {
   light_attack: 6,
   heavy_attack: 14,
+  guard_break: 8,
   block: 2,
   dash_forward: 4,
   dash_back: 4,
@@ -67,12 +68,23 @@ export class AggroBot implements BotAdapter {
 
     if (
       canAttack &&
+      (input.context.opponentBlocking || input.context.opponentDefensiveStreak >= 2) &&
+      affordable.includes("guard_break")
+    ) {
+      return {
+        action: "guard_break",
+        reasoning: "Opponent is leaning defensive, so using guard break to punish blocking patterns.",
+      };
+    }
+
+    if (
+      canAttack &&
       input.context.opponentBlocking &&
       affordable.includes("light_attack")
     ) {
       return {
         action: "light_attack",
-        reasoning: "Opponent blocked last turn, so switching to lighter pressure.",
+        reasoning: "No guard break available, so switching to lighter pressure.",
       };
     }
 
@@ -95,7 +107,7 @@ export class AggroBot implements BotAdapter {
     ) {
       return {
         action: "rest",
-        reasoning: "Opponent is in a defensive loop, taking a safe stamina reset.",
+        reasoning: "Opponent is stuck in a defensive loop, taking a safe stamina reset.",
       };
     }
 
@@ -158,6 +170,8 @@ export class TurtleBot implements BotAdapter {
   async getAction(input: ModelInput): Promise<ActionDecision> {
     const affordable = getAffordableActions(input);
     const canAttack = inAttackRange(input);
+    const opponentCanGuardBreak =
+      input.context.opponentBlocking || input.context.opponentDefensiveStreak >= 2;
 
     if (canAttack && input.context.opponentResting && affordable.includes("heavy_attack")) {
       return {
@@ -179,13 +193,12 @@ export class TurtleBot implements BotAdapter {
 
     if (
       input.context.selfRepeatedBlockCount >= 2 &&
-      !input.context.opponentAggressiveStreak &&
       canAttack &&
       affordable.includes("light_attack")
     ) {
       return {
         action: "light_attack",
-        reasoning: "Breaking my own block loop with a measured attack.",
+        reasoning: "Breaking my own defensive loop with a measured attack.",
       };
     }
 
@@ -212,6 +225,7 @@ export class TurtleBot implements BotAdapter {
     }
 
     if (
+      !opponentCanGuardBreak &&
       (input.context.selfLowHp ||
         input.context.opponentAggressiveStreak >= 1 ||
         canAttack) &&
@@ -220,7 +234,14 @@ export class TurtleBot implements BotAdapter {
     ) {
       return {
         action: "block",
-        reasoning: "Prioritizing defense under pressure or while in range.",
+        reasoning: "Prioritizing defense under pressure while guard-break risk looks manageable.",
+      };
+    }
+
+    if (canAttack && affordable.includes("light_attack")) {
+      return {
+        action: "light_attack",
+        reasoning: "Choosing a measured attack instead of over-committing to block.",
       };
     }
 
@@ -238,17 +259,17 @@ export class TurtleBot implements BotAdapter {
       };
     }
 
-    if (canAttack && affordable.includes("light_attack")) {
-      return {
-        action: "light_attack",
-        reasoning: "Taking a measured attack opportunity.",
-      };
-    }
-
     if (input.context.selfLowStamina && affordable.includes("rest")) {
       return {
         action: "rest",
         reasoning: "Recovering stamina because no better defensive option is available.",
+      };
+    }
+
+    if (affordable.includes("block")) {
+      return {
+        action: "block",
+        reasoning: "Using block as a fallback, but no longer relying on it endlessly.",
       };
     }
 
@@ -276,6 +297,17 @@ export class BalancedBot implements BotAdapter {
       return {
         action: "heavy_attack",
         reasoning: "Capitalizing on a resting opponent.",
+      };
+    }
+
+    if (
+      canAttack &&
+      (input.context.opponentBlocking || input.context.opponentDefensiveStreak >= 2) &&
+      affordable.includes("guard_break")
+    ) {
+      return {
+        action: "guard_break",
+        reasoning: "Opponent is showing a defensive pattern, so using guard break as a direct punish.",
       };
     }
 
@@ -358,7 +390,7 @@ export class BalancedBot implements BotAdapter {
     ) {
       return {
         action: "light_attack",
-        reasoning: "Using lighter pressure to probe a defensive opponent.",
+        reasoning: "No guard break available, so probing with lighter pressure.",
       };
     }
 
