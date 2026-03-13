@@ -1,0 +1,108 @@
+{
+  "matchId": "mock-match-001",
+  "fighters": {
+    "left": { "id": "f1", "name": "Astra Vale" },
+    "right": { "id": "f2", "name": "Bram Kade" }
+  },
+  "steps": [
+    {
+      "step": 0,
+      "round": 1,
+      "distance": { "band": "far", "lane": 85 },
+      "fighters": {
+        "left": { "hp": 100, "stamina": 100, "action": "observe" },
+        "right": { "hp": 100, "stamina": 100, "action": "observe" }
+      },
+      "summary": "Bell rings. Both fighters begin at long range.",
+      "events": ["match_start"]
+    },
+    {
+      "step": 1,
+      "round": 1,
+      "distance": { "band": "mid", "lane": 66 },
+      "fighters": {
+        "left": { "hp": 100, "stamina": 92, "action": "dash_forward" },
+        "right": { "hp": 100, "stamina": 95, "action": "block" }
+      },
+      "summary": "Astra dashes in while Bram braces behind a high guard.",
+      "events": ["close_distance"]
+    },
+    {
+      "step": 2,
+      "round": 1,
+      "distance": { "band": "close", "lane": 44 },
+      "fighters": {
+        "left": { "hp": 100, "stamina": 86, "action": "poke" },
+        "right": { "hp": 96, "stamina": 90, "action": "retreat_guard" }
+      },
+      "summary": "A fast poke clips Bram as he retreats under guard.",
+      "events": ["light_hit", "disengage_attempt"]
+    },
+    {
+      "step": 3,
+      "round": 1,
+      "distance": { "band": "mid", "lane": 61 },
+      "fighters": {
+        "left": { "hp": 95, "stamina": 84, "action": "block" },
+        "right": { "hp": 96, "stamina": 82, "action": "guard_break" }
+      },
+      "summary": "Bram swings a guard break and cracks Astra's defense.",
+      "events": ["guard_break_success"]
+    },
+    {
+      "step": 4,
+      "round": 2,
+      "distance": { "band": "far", "lane": 82 },
+      "fighters": {
+        "left": { "hp": 95, "stamina": 94, "action": "rest" },
+        "right": { "hp": 96, "stamina": 90, "action": "dash_back" }
+      },
+      "summary": "Round 2 opens with disengagement. Astra takes a breath.",
+      "events": ["round_start"]
+    },
+    {
+      "step": 5,
+      "round": 2,
+      "distance": { "band": "mid", "lane": 58 },
+      "fighters": {
+        "left": { "hp": 95, "stamina": 88, "action": "dash_forward" },
+        "right": { "hp": 96, "stamina": 84, "action": "poke" }
+      },
+      "summary": "Both commit at once. Bram's poke lands first.",
+      "events": ["light_hit"]
+    },
+    {
+      "step": 6,
+      "round": 2,
+      "distance": { "band": "close", "lane": 41 },
+      "fighters": {
+        "left": { "hp": 84, "stamina": 80, "action": "guard_break" },
+        "right": { "hp": 66, "stamina": 70, "action": "block" }
+      },
+      "summary": "Astra answers with a heavy guard break into body damage.",
+      "events": ["guard_break_success", "heavy_hit"]
+    },
+    {
+      "step": 7,
+      "round": 3,
+      "distance": { "band": "close", "lane": 47 },
+      "fighters": {
+        "left": { "hp": 84, "stamina": 74, "action": "poke" },
+        "right": { "hp": 14, "stamina": 60, "action": "rest" }
+      },
+      "summary": "Astra keeps pressure with a clean poke while Bram tries to recover.",
+      "events": ["round_start", "critical_hp"]
+    },
+    {
+      "step": 8,
+      "round": 3,
+      "distance": { "band": "close", "lane": 39 },
+      "fighters": {
+        "left": { "hp": 84, "stamina": 62, "action": "guard_break" },
+        "right": { "hp": 0, "stamina": 48, "action": "block" }
+      },
+      "summary": "Final exchange: Astra breaks guard again and secures the KO.",
+      "events": ["ko"]
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arena Observer Debug UI</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1 id="match-title">Arena Observer</h1>
+        <p>Lightweight spectator/debug panel driven by mock timeline data.</p>
+      </header>
+
+      <section class="grid">
+        <article id="left-panel" class="panel">
+          <h2 id="left-name" class="fighter-name">Left Fighter</h2>
+          <div class="stats">HP: <strong id="left-hp-value">0</strong></div>
+          <div class="bar"><div id="left-hp-bar" class="fill hp"></div></div>
+          <div class="stats">Stamina: <strong id="left-st-value">0</strong></div>
+          <div class="bar"><div id="left-st-bar" class="fill stamina"></div></div>
+          <div class="stats">Action: <strong id="left-action">-</strong></div>
+        </article>
+
+        <article class="panel center">
+          <div class="meta">Round <strong id="round-number">1</strong></div>
+          <div class="meta">Distance Band: <strong id="distance-band">far</strong></div>
+          <div class="meta" id="distance-lane">0% lane separation</div>
+          <p class="exchange" id="exchange">-</p>
+          <p class="meta" id="notes">Step notes appear here.</p>
+
+          <div class="lane" aria-label="distance lane">
+            <div id="left-marker" class="marker left">L</div>
+            <div id="right-marker" class="marker right">R</div>
+          </div>
+        </article>
+
+        <article id="right-panel" class="panel">
+          <h2 id="right-name" class="fighter-name">Right Fighter</h2>
+          <div class="stats">HP: <strong id="right-hp-value">0</strong></div>
+          <div class="bar"><div id="right-hp-bar" class="fill hp"></div></div>
+          <div class="stats">Stamina: <strong id="right-st-value">0</strong></div>
+          <div class="bar"><div id="right-st-bar" class="fill stamina"></div></div>
+          <div class="stats">Action: <strong id="right-action">-</strong></div>
+        </article>
+      </section>
+
+      <section class="controls">
+        <button id="prev-step" type="button">Previous</button>
+        <button id="next-step" type="button">Next</button>
+        <button id="autoplay" type="button">Play</button>
+        <button id="reset" type="button">Reset</button>
+      </section>
+
+      <section class="log panel">
+        <strong>Recent Action History</strong>
+        <ul id="history-list"></ul>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
