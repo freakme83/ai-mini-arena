@@ -1,4 +1,4 @@
-ai-mini-arena
+ai-mini-arena experiment
 
 A minimal simulation arena where AI models compete by making decisions under identical rules.
 This project explores how different language models behave in a shared environment when faced with the same constraints, actions, and objectives.
