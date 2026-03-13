@@ -55,6 +55,7 @@ function createEmptyActionCounts(): ActionCounts {
   return {
     light_attack: 0,
     heavy_attack: 0,
+    guard_break: 0,
     block: 0,
     dash_forward: 0,
     dash_back: 0,
@@ -464,3 +465,4 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+
