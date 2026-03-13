@@ -23,16 +23,27 @@ import {
   canAffordAction,
   getActionRule,
   isAttack,
-  isInRange,
 } from "./rules";
 
-function createPlayer(id: string, name: string): PlayerState {
+const PLAYER1_START_POSITION = -1;
+const PLAYER2_START_POSITION = 1;
+const ATTACK_RANGE_DISTANCE = 1;
+
+function computeDistance(player1: PlayerState, player2: PlayerState): number {
+  return Math.abs(player1.position - player2.position);
+}
+
+function isDistanceInAttackRange(distance: number): boolean {
+  return distance <= ATTACK_RANGE_DISTANCE;
+}
+
+function createPlayer(id: string, name: string, position: number): PlayerState {
   return {
     id,
     name,
     hp: STARTING_HP,
     stamina: STARTING_STAMINA,
-    position: 0,
+    position,
     lastAction: null,
   };
 }
@@ -41,8 +52,8 @@ export function createInitialArenaState(
   player1Name: string,
   player2Name: string
 ): ArenaState {
-  const player1 = createPlayer("player1", player1Name);
-  const player2 = createPlayer("player2", player2Name);
+  const player1 = createPlayer("player1", player1Name, PLAYER1_START_POSITION);
+  const player2 = createPlayer("player2", player2Name, PLAYER2_START_POSITION);
 
   return {
     round: 1,
@@ -50,7 +61,7 @@ export function createInitialArenaState(
     status: "ongoing",
     player1,
     player2,
-    distance: Math.abs(player1.position - player2.position),
+    distance: computeDistance(player1, player2),
     allowedActions: ALLOWED_ACTIONS,
     roundHistory: [],
   };
@@ -74,9 +85,21 @@ function resolveAffordableAction(
   return { effectiveAction: chosenAction, notes };
 }
 
+function getMovementDelta(player: PlayerState, action: Action): number {
+  if (action === "dash_forward") {
+    return player.id === "player1" ? 1 : -1;
+  }
+
+  if (action === "dash_back") {
+    return player.id === "player1" ? -1 : 1;
+  }
+
+  return 0;
+}
+
 function applyMovement(player: PlayerState, action: Action): void {
-  const movement = ACTION_RULES[action].movement;
-  player.position = clampPosition(player.position + movement);
+  const delta = getMovementDelta(player, action);
+  player.position = clampPosition(player.position + delta);
 }
 
 function calculateRawDamage(attackerAction: Action): number {
@@ -86,7 +109,7 @@ function calculateRawDamage(attackerAction: Action): number {
 function calculateDamageTaken(params: {
   attackerAction: Action;
   defenderAction: Action;
-  attackerPosition: number;
+  distance: number;
 }): {
   damage: number;
   wasBlocked: boolean;
@@ -94,7 +117,7 @@ function calculateDamageTaken(params: {
   brokeGuard: boolean;
   notes: string[];
 } {
-  const { attackerAction, defenderAction, attackerPosition } = params;
+  const { attackerAction, defenderAction, distance } = params;
   const notes: string[] = [];
 
   if (!isAttack(attackerAction)) {
@@ -107,8 +130,10 @@ function calculateDamageTaken(params: {
     };
   }
 
-  if (!isInRange(attackerPosition)) {
-    notes.push(`${attackerAction} missed because attacker was out of range.`);
+  if (!isDistanceInAttackRange(distance)) {
+    notes.push(
+      `${attackerAction} missed because the target was out of range (distance ${distance}).`
+    );
     return {
       damage: 0,
       wasBlocked: false,
@@ -287,9 +312,19 @@ function determineOutcome(state: ArenaState): {
     if (state.player1.hp > state.player2.hp) {
       return { outcome: "player1_win", winnerId: state.player1.id };
     }
+
     if (state.player2.hp > state.player1.hp) {
       return { outcome: "player2_win", winnerId: state.player2.id };
     }
+
+    if (state.player1.stamina > state.player2.stamina) {
+      return { outcome: "player1_win", winnerId: state.player1.id };
+    }
+
+    if (state.player2.stamina > state.player1.stamina) {
+      return { outcome: "player2_win", winnerId: state.player2.id };
+    }
+
     return { outcome: "draw", winnerId: null };
   }
 
@@ -328,16 +363,18 @@ export function resolveRound(
   applyMovement(nextPlayer1, p1EffectiveAction);
   applyMovement(nextPlayer2, p2EffectiveAction);
 
+  const distanceAfterMovement = computeDistance(nextPlayer1, nextPlayer2);
+
   const p1AttackResult = calculateDamageTaken({
     attackerAction: p1EffectiveAction,
     defenderAction: p2EffectiveAction,
-    attackerPosition: nextPlayer1.position,
+    distance: distanceAfterMovement,
   });
 
   const p2AttackResult = calculateDamageTaken({
     attackerAction: p2EffectiveAction,
     defenderAction: p1EffectiveAction,
-    attackerPosition: nextPlayer2.position,
+    distance: distanceAfterMovement,
   });
 
   const damageToPlayer2 = applyRestingDamageBonus({
@@ -388,7 +425,7 @@ export function resolveRound(
   nextPlayer1.lastAction = p1EffectiveAction;
   nextPlayer2.lastAction = p2EffectiveAction;
 
-  const distance = Math.abs(nextPlayer1.position - nextPlayer2.position);
+  const distance = computeDistance(nextPlayer1, nextPlayer2);
 
   const player1Resolved = buildResolvedAction({
     player: nextPlayer1,
@@ -427,7 +464,7 @@ export function resolveRound(
     player1StaminaAfter: nextPlayer1.stamina,
     player2StaminaAfter: nextPlayer2.stamina,
     distanceAfter: distance,
-    summary: `${nextPlayer1.name} used ${p1EffectiveAction}, ${nextPlayer2.name} used ${p2EffectiveAction}.`,
+    summary: `${nextPlayer1.name} used ${p1EffectiveAction}, ${nextPlayer2.name} used ${p2EffectiveAction}. Distance is now ${distance}.`,
   };
 
   const nextState: ArenaState = {
