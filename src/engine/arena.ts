@@ -11,8 +11,10 @@ import {
   ALLOWED_ACTIONS,
   ACTION_RULES,
   BLOCK_DAMAGE_REDUCTION,
+  BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY,
   MAX_ROUNDS,
   MAX_STAMINA,
+  RESTING_DAMAGE_BONUS,
   STARTING_HP,
   STARTING_STAMINA,
   clampPosition,
@@ -52,9 +54,7 @@ export function createInitialArenaState(
 }
 
 function clonePlayer(player: PlayerState): PlayerState {
-  return {
-    ...player,
-  };
+  return { ...player };
 }
 
 function resolveAffordableAction(
@@ -82,11 +82,12 @@ function calculateRawDamage(attackerAction: Action): number {
   return getActionRule(attackerAction).baseDamage;
 }
 
-function calculateDamageTaken(
-  attackerAction: Action,
-  defenderAction: Action,
-  attackerPosition: number
-): { damage: number; wasBlocked: boolean; wasMissed: boolean; notes: string[] } {
+function calculateDamageTaken(params: {
+  attackerAction: Action;
+  defenderAction: Action;
+  attackerPosition: number;
+}): { damage: number; wasBlocked: boolean; wasMissed: boolean; notes: string[] } {
+  const { attackerAction, defenderAction, attackerPosition } = params;
   const notes: string[] = [];
 
   if (!isAttack(attackerAction)) {
@@ -111,7 +112,12 @@ function calculateDamageTaken(
     };
   }
 
-  return { damage: rawDamage, wasBlocked: false, wasMissed: false, notes };
+  return {
+    damage: rawDamage,
+    wasBlocked: false,
+    wasMissed: false,
+    notes,
+  };
 }
 
 function spendAndRecoverStamina(player: PlayerState, action: Action): {
@@ -130,6 +136,42 @@ function spendAndRecoverStamina(player: PlayerState, action: Action): {
     staminaBefore,
     staminaAfter: player.stamina,
   };
+}
+
+function applyBlockedHeavyAttackPenalty(params: {
+  attacker: PlayerState;
+  attackerAction: Action;
+  wasBlocked: boolean;
+  notes: string[];
+}): void {
+  const { attacker, attackerAction, wasBlocked, notes } = params;
+
+  if (attackerAction === "heavy_attack" && wasBlocked) {
+    attacker.stamina = Math.max(
+      0,
+      attacker.stamina - BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY
+    );
+    notes.push(
+      `Blocked heavy attack caused an extra ${BLOCKED_HEAVY_ATTACK_STAMINA_PENALTY} stamina penalty.`
+    );
+  }
+}
+
+function applyRestingDamageBonus(params: {
+  defenderAction: Action;
+  incomingDamage: number;
+  notes: string[];
+}): number {
+  const { defenderAction, incomingDamage, notes } = params;
+
+  if (defenderAction === "rest" && incomingDamage > 0) {
+    notes.push(
+      `Resting target took +${RESTING_DAMAGE_BONUS} bonus damage due to vulnerability.`
+    );
+    return incomingDamage + RESTING_DAMAGE_BONUS;
+  }
+
+  return incomingDamage;
 }
 
 function buildResolvedAction(params: {
@@ -219,20 +261,46 @@ export function resolveRound(
   applyMovement(nextPlayer1, p1EffectiveAction);
   applyMovement(nextPlayer2, p2EffectiveAction);
 
-  const p1AttackResult = calculateDamageTaken(
-    p1EffectiveAction,
-    p2EffectiveAction,
-    nextPlayer1.position
-  );
+  const p1AttackResult = calculateDamageTaken({
+    attackerAction: p1EffectiveAction,
+    defenderAction: p2EffectiveAction,
+    attackerPosition: nextPlayer1.position,
+  });
 
-  const p2AttackResult = calculateDamageTaken(
-    p2EffectiveAction,
-    p1EffectiveAction,
-    nextPlayer2.position
-  );
+  const p2AttackResult = calculateDamageTaken({
+    attackerAction: p2EffectiveAction,
+    defenderAction: p1EffectiveAction,
+    attackerPosition: nextPlayer2.position,
+  });
 
-  nextPlayer1.hp = Math.max(0, nextPlayer1.hp - p2AttackResult.damage);
-  nextPlayer2.hp = Math.max(0, nextPlayer2.hp - p1AttackResult.damage);
+  let damageToPlayer2 = applyRestingDamageBonus({
+    defenderAction: p2EffectiveAction,
+    incomingDamage: p1AttackResult.damage,
+    notes: p1AttackResult.notes,
+  });
+
+  let damageToPlayer1 = applyRestingDamageBonus({
+    defenderAction: p1EffectiveAction,
+    incomingDamage: p2AttackResult.damage,
+    notes: p2AttackResult.notes,
+  });
+
+  nextPlayer1.hp = Math.max(0, nextPlayer1.hp - damageToPlayer1);
+  nextPlayer2.hp = Math.max(0, nextPlayer2.hp - damageToPlayer2);
+
+  applyBlockedHeavyAttackPenalty({
+    attacker: nextPlayer1,
+    attackerAction: p1EffectiveAction,
+    wasBlocked: p1AttackResult.wasBlocked,
+    notes: p1AttackResult.notes,
+  });
+
+  applyBlockedHeavyAttackPenalty({
+    attacker: nextPlayer2,
+    attackerAction: p2EffectiveAction,
+    wasBlocked: p2AttackResult.wasBlocked,
+    notes: p2AttackResult.notes,
+  });
 
   nextPlayer1.lastAction = p1EffectiveAction;
   nextPlayer2.lastAction = p2EffectiveAction;
@@ -258,9 +326,9 @@ export function resolveRound(
     chosenAction: player1Action,
     effectiveAction: p1EffectiveAction,
     staminaBefore: p1Stamina.staminaBefore,
-    staminaAfter: p1Stamina.staminaAfter,
-    damageDealt: p1AttackResult.damage,
-    damageTaken: p2AttackResult.damage,
+    staminaAfter: nextPlayer1.stamina,
+    damageDealt: damageToPlayer2,
+    damageTaken: damageToPlayer1,
     wasBlocked: p1AttackResult.wasBlocked,
     wasMissed: p1AttackResult.wasMissed,
     notes: [...p1Resolution.notes, ...p1AttackResult.notes],
@@ -271,9 +339,9 @@ export function resolveRound(
     chosenAction: player2Action,
     effectiveAction: p2EffectiveAction,
     staminaBefore: p2Stamina.staminaBefore,
-    staminaAfter: p2Stamina.staminaAfter,
-    damageDealt: p2AttackResult.damage,
-    damageTaken: p1AttackResult.damage,
+    staminaAfter: nextPlayer2.stamina,
+    damageDealt: damageToPlayer1,
+    damageTaken: damageToPlayer2,
     wasBlocked: p2AttackResult.wasBlocked,
     wasMissed: p2AttackResult.wasMissed,
     notes: [...p2Resolution.notes, ...p2AttackResult.notes],
