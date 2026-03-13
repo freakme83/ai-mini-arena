@@ -40,6 +40,10 @@ function isDistanceInAttackRange(distance: number): boolean {
   return distance <= ATTACK_RANGE_DISTANCE;
 }
 
+function isGuardingAction(action: Action): boolean {
+  return action === "block" || action === "retreat_guard";
+}
+
 function createPlayer(id: string, name: string, position: number): PlayerState {
   return {
     id,
@@ -93,7 +97,7 @@ function getMovementDelta(player: PlayerState, action: Action): number {
     return player.id === "player1" ? 1 : -1;
   }
 
-  if (action === "dash_back") {
+  if (action === "dash_back" || action === "retreat_guard") {
     return player.id === "player1" ? -1 : 1;
   }
 
@@ -149,10 +153,10 @@ function calculateDamageTaken(params: {
   const rawDamage = calculateRawDamage(attackerAction);
 
   if (attackerAction === "guard_break") {
-    if (defenderAction === "block") {
+    if (isGuardingAction(defenderAction)) {
       const damage = rawDamage + GUARD_BREAK_BONUS_DAMAGE;
       notes.push(
-        `guard_break punished block for ${damage} damage and will apply stamina break.`
+        `guard_break punished a guarding opponent for ${damage} damage and will apply stamina break.`
       );
       return {
         damage,
@@ -173,7 +177,7 @@ function calculateDamageTaken(params: {
     };
   }
 
-  if (defenderAction === "block") {
+  if (isGuardingAction(defenderAction)) {
     const reducedDamage = Math.round(rawDamage * (1 - BLOCK_DAMAGE_REDUCTION));
     const blockedDamage = Math.max(BLOCK_CHIP_DAMAGE, reducedDamage + BLOCK_CHIP_DAMAGE);
     notes.push(
@@ -245,7 +249,7 @@ function applyGuardBreakStaminaBreak(params: {
 
   if (
     attackerAction === "guard_break" &&
-    defenderAction === "block" &&
+    isGuardingAction(defenderAction) &&
     brokeGuard
   ) {
     defender.stamina = Math.max(0, defender.stamina - GUARD_BREAK_STAMINA_BREAK);

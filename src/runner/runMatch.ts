@@ -18,12 +18,18 @@ function isAggressiveAction(action: Action): boolean {
   return (
     action === "light_attack" ||
     action === "heavy_attack" ||
+    action === "poke" ||
     action === "dash_forward"
   );
 }
 
 function isDefensiveAction(action: Action): boolean {
-  return action === "block" || action === "dash_back" || action === "rest";
+  return (
+    action === "block" ||
+    action === "retreat_guard" ||
+    action === "dash_back" ||
+    action === "rest"
+  );
 }
 
 function countTrailing<T>(items: T[], predicate: (item: T) => boolean): number {
@@ -118,7 +124,8 @@ function toModelInput(
       selfLowStamina: self.stamina <= 8,
       opponentLowStamina: opponent.stamina <= 8,
       opponentResting: opponent.lastAction === "rest",
-      opponentBlocking: opponent.lastAction === "block",
+      opponentBlocking:
+        opponent.lastAction === "block" || opponent.lastAction === "retreat_guard",
       opponentAggressiveStreak: countTrailing(opponentRecentActions, isAggressiveAction),
       opponentDefensiveStreak: countTrailing(opponentRecentActions, isDefensiveAction),
       selfRepeatedBlockCount: countTrailing(selfRecentActions, (action) => action === "block"),
