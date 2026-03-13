@@ -1,6 +1,7 @@
 export type Action =
   | "light_attack"
   | "heavy_attack"
+  | "guard_break"
   | "block"
   | "dash_forward"
   | "dash_back"
