@@ -1,10 +1,94 @@
-import { createInitialArenaState, resolveRound, buildMatchResult, isMatchFinished } from "../engine/arena";
-import { ArenaState, BotAdapter, ModelInput } from "../engine/types";
+import {
+  buildMatchResult,
+  createInitialArenaState,
+  isMatchFinished,
+  resolveRound,
+} from "../engine/arena";
+import {
+  Action,
+  ArenaState,
+  BotAdapter,
+  ModelInput,
+  PerspectiveRoundSummary,
+  RoundLog,
+} from "../engine/types";
 import { AggroBot, TurtleBot } from "../adapters/mock";
 
-function toModelInput(state: ArenaState, perspective: "player1" | "player2"): ModelInput {
+function isAggressiveAction(action: Action): boolean {
+  return (
+    action === "light_attack" ||
+    action === "heavy_attack" ||
+    action === "dash_forward"
+  );
+}
+
+function isDefensiveAction(action: Action): boolean {
+  return action === "block" || action === "dash_back" || action === "rest";
+}
+
+function countTrailing<T>(items: T[], predicate: (item: T) => boolean): number {
+  let count = 0;
+
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (!predicate(items[i])) {
+      break;
+    }
+    count += 1;
+  }
+
+  return count;
+}
+
+function toPerspectiveRound(
+  roundLog: RoundLog,
+  perspective: "player1" | "player2"
+): PerspectiveRoundSummary {
+  if (perspective === "player1") {
+    return {
+      round: roundLog.round,
+      selfAction: roundLog.player1Resolved.effectiveAction,
+      opponentAction: roundLog.player2Resolved.effectiveAction,
+      selfDamageDealt: roundLog.player1Resolved.damageDealt,
+      selfDamageTaken: roundLog.player1Resolved.damageTaken,
+      opponentDamageDealt: roundLog.player2Resolved.damageDealt,
+      opponentDamageTaken: roundLog.player2Resolved.damageTaken,
+      selfHpAfter: roundLog.player1HpAfter,
+      opponentHpAfter: roundLog.player2HpAfter,
+      selfStaminaAfter: roundLog.player1StaminaAfter,
+      opponentStaminaAfter: roundLog.player2StaminaAfter,
+      distanceAfter: roundLog.distanceAfter,
+    };
+  }
+
+  return {
+    round: roundLog.round,
+    selfAction: roundLog.player2Resolved.effectiveAction,
+    opponentAction: roundLog.player1Resolved.effectiveAction,
+    selfDamageDealt: roundLog.player2Resolved.damageDealt,
+    selfDamageTaken: roundLog.player2Resolved.damageTaken,
+    opponentDamageDealt: roundLog.player1Resolved.damageDealt,
+    opponentDamageTaken: roundLog.player1Resolved.damageTaken,
+    selfHpAfter: roundLog.player2HpAfter,
+    opponentHpAfter: roundLog.player1HpAfter,
+    selfStaminaAfter: roundLog.player2StaminaAfter,
+    opponentStaminaAfter: roundLog.player1StaminaAfter,
+    distanceAfter: roundLog.distanceAfter,
+  };
+}
+
+function toModelInput(
+  state: ArenaState,
+  perspective: "player1" | "player2"
+): ModelInput {
   const self = perspective === "player1" ? state.player1 : state.player2;
   const opponent = perspective === "player1" ? state.player2 : state.player1;
+
+  const recentRounds = state.roundHistory
+    .slice(-5)
+    .map((roundLog) => toPerspectiveRound(roundLog, perspective));
+
+  const selfRecentActions = recentRounds.map((round) => round.selfAction);
+  const opponentRecentActions = recentRounds.map((round) => round.opponentAction);
 
   return {
     self: {
@@ -27,6 +111,23 @@ function toModelInput(state: ArenaState, perspective: "player1" | "player2"): Mo
     maxRounds: state.maxRounds,
     distance: state.distance,
     allowedActions: state.allowedActions,
+    context: {
+      inRange: self.position >= 0,
+      selfLowHp: self.hp <= 30,
+      opponentLowHp: opponent.hp <= 30,
+      selfLowStamina: self.stamina <= 8,
+      opponentLowStamina: opponent.stamina <= 8,
+      opponentResting: opponent.lastAction === "rest",
+      opponentBlocking: opponent.lastAction === "block",
+      opponentAggressiveStreak: countTrailing(opponentRecentActions, isAggressiveAction),
+      opponentDefensiveStreak: countTrailing(opponentRecentActions, isDefensiveAction),
+      selfRepeatedBlockCount: countTrailing(selfRecentActions, (action) => action === "block"),
+    },
+    history: {
+      recentRounds,
+      selfRecentActions,
+      opponentRecentActions,
+    },
   };
 }
 
