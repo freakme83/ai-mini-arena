@@ -1,0 +1,25 @@
+name: Run AI Mini Arena Tournament
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-tournament:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tournament
+        run: npm run tournament
