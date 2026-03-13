@@ -167,7 +167,7 @@ function toModelInput(
     distance: state.distance,
     allowedActions: state.allowedActions,
     context: {
-      inRange: self.position >= 0,
+      inRange: state.distance <= 1,
       selfLowHp: self.hp <= 30,
       opponentLowHp: opponent.hp <= 30,
       selfLowStamina: self.stamina <= 8,
