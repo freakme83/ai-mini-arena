@@ -3,8 +3,10 @@ import { Action } from "./types";
 export const ALLOWED_ACTIONS: Action[] = [
   "light_attack",
   "heavy_attack",
+  "poke",
   "guard_break",
   "block",
+  "retreat_guard",
   "dash_forward",
   "dash_back",
   "rest",
@@ -80,6 +82,13 @@ export const ACTION_RULES: Record<Action, ActionRule> = {
     movement: 0,
     staminaGain: 0,
   },
+  poke: {
+    staminaCost: 4,
+    baseDamage: 6,
+    requiresCloseRange: true,
+    movement: 0,
+    staminaGain: 0,
+  },
   guard_break: {
     staminaCost: 8,
     baseDamage: 6,
@@ -92,6 +101,13 @@ export const ACTION_RULES: Record<Action, ActionRule> = {
     baseDamage: 0,
     requiresCloseRange: false,
     movement: 0,
+    staminaGain: 1,
+  },
+  retreat_guard: {
+    staminaCost: 5,
+    baseDamage: 0,
+    requiresCloseRange: false,
+    movement: -1,
     staminaGain: 1,
   },
   dash_forward: {
@@ -133,12 +149,17 @@ export function isAttack(action: Action): boolean {
   return (
     action === "light_attack" ||
     action === "heavy_attack" ||
+    action === "poke" ||
     action === "guard_break"
   );
 }
 
 export function isMovement(action: Action): boolean {
-  return action === "dash_forward" || action === "dash_back";
+  return (
+    action === "dash_forward" ||
+    action === "dash_back" ||
+    action === "retreat_guard"
+  );
 }
 
 export function getActionRule(action: Action): ActionRule {

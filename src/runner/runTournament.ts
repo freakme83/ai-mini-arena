@@ -15,6 +15,7 @@ import {
   RoundLog,
 } from "../engine/types";
 import { AggroBot, BalancedBot, RandomBot, TurtleBot } from "../adapters/mock";
+import { buildModelInput } from "./modelInput";
 
 type BotFactory = () => BotAdapter;
 
@@ -57,6 +58,8 @@ function createEmptyActionCounts(): ActionCounts {
     heavy_attack: 0,
     guard_break: 0,
     block: 0,
+    poke: 0,
+    retreat_guard: 0,
     dash_forward: 0,
     dash_back: 0,
     rest: 0,
@@ -73,12 +76,18 @@ function isAggressiveAction(action: Action): boolean {
   return (
     action === "light_attack" ||
     action === "heavy_attack" ||
+    action === "poke" ||
     action === "dash_forward"
   );
 }
 
 function isDefensiveAction(action: Action): boolean {
-  return action === "block" || action === "dash_back" || action === "rest";
+  return (
+    action === "block" ||
+    action === "retreat_guard" ||
+    action === "dash_back" ||
+    action === "rest"
+  );
 }
 
 function countTrailing<T>(items: T[], predicate: (item: T) => boolean): number {
@@ -135,58 +144,7 @@ function toModelInput(
   state: ArenaState,
   perspective: SeatPerspective
 ): ModelInput {
-  const self = perspective === "player1" ? state.player1 : state.player2;
-  const opponent = perspective === "player1" ? state.player2 : state.player1;
-
-  const recentRounds = state.roundHistory
-    .slice(-5)
-    .map((roundLog) => toPerspectiveRound(roundLog, perspective));
-
-  const selfRecentActions = recentRounds.map((round) => round.selfAction);
-  const opponentRecentActions = recentRounds.map((round) => round.opponentAction);
-
-  return {
-    self: {
-      id: self.id,
-      name: self.name,
-      hp: self.hp,
-      stamina: self.stamina,
-      position: self.position,
-      lastAction: self.lastAction,
-    },
-    opponent: {
-      id: opponent.id,
-      name: opponent.name,
-      hp: opponent.hp,
-      stamina: opponent.stamina,
-      position: opponent.position,
-      lastAction: opponent.lastAction,
-    },
-    round: state.round,
-    maxRounds: state.maxRounds,
-    distance: state.distance,
-    allowedActions: state.allowedActions,
-    context: {
-      inRange: state.distance <= 1,
-      selfLowHp: self.hp <= 30,
-      opponentLowHp: opponent.hp <= 30,
-      selfLowStamina: self.stamina <= 8,
-      opponentLowStamina: opponent.stamina <= 8,
-      opponentResting: opponent.lastAction === "rest",
-      opponentBlocking: opponent.lastAction === "block",
-      opponentAggressiveStreak: countTrailing(opponentRecentActions, isAggressiveAction),
-      opponentDefensiveStreak: countTrailing(opponentRecentActions, isDefensiveAction),
-      selfRepeatedBlockCount: countTrailing(
-        selfRecentActions,
-        (action) => action === "block"
-      ),
-    },
-    history: {
-      recentRounds,
-      selfRecentActions,
-      opponentRecentActions,
-    },
-  };
+  return buildModelInput(state, perspective);
 }
 
 async function getActions(state: ArenaState, bot1: BotAdapter, bot2: BotAdapter) {
