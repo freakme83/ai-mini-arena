@@ -3,61 +3,109 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Arena Observer Debug UI</title>
+    <title>Arena Observer</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="container">
-      <header>
-        <h1 id="match-title">Arena Observer</h1>
-        <p>Lightweight spectator/debug panel driven by mock timeline data.</p>
-      </header>
-
-      <section class="grid">
-        <article id="left-panel" class="panel">
-          <h2 id="left-name" class="fighter-name">Left Fighter</h2>
-          <div class="stats">HP: <strong id="left-hp-value">0</strong></div>
-          <div class="bar"><div id="left-hp-bar" class="fill hp"></div></div>
-          <div class="stats">Stamina: <strong id="left-st-value">0</strong></div>
-          <div class="bar"><div id="left-st-bar" class="fill stamina"></div></div>
-          <div class="stats">Action: <strong id="left-action">-</strong></div>
-        </article>
-
-        <article class="panel center">
-          <div class="meta">Round <strong id="round-number">1</strong></div>
-          <div class="meta">Distance Band: <strong id="distance-band">far</strong></div>
-          <div class="meta" id="distance-lane">0% lane separation</div>
-          <p class="exchange" id="exchange">-</p>
-          <p class="meta" id="notes">Step notes appear here.</p>
-
-          <div class="lane" aria-label="distance lane">
-            <div id="left-marker" class="marker left">L</div>
-            <div id="right-marker" class="marker right">R</div>
+    <!-- Top HUD -->
+    <div class="hud">
+      <div class="hud-fighter hud-left">
+        <div class="hud-name" id="left-name">Fighter 1</div>
+        <div class="hud-bars">
+          <div class="hud-bar-row">
+            <span class="hud-bar-label">HP</span>
+            <div class="hud-bar hp-bar"><div id="left-hp-fill" class="hud-fill hp-fill"></div></div>
+            <span class="hud-bar-value" id="left-hp-val">100</span>
           </div>
-        </article>
+          <div class="hud-bar-row">
+            <span class="hud-bar-label">ST</span>
+            <div class="hud-bar st-bar"><div id="left-st-fill" class="hud-fill st-fill"></div></div>
+            <span class="hud-bar-value" id="left-st-val">100</span>
+          </div>
+        </div>
+      </div>
+      <div class="hud-center">
+        <div class="hud-round" id="round-display">ROUND 1</div>
+        <div class="hud-vs">VS</div>
+      </div>
+      <div class="hud-fighter hud-right">
+        <div class="hud-name" id="right-name">Fighter 2</div>
+        <div class="hud-bars">
+          <div class="hud-bar-row">
+            <span class="hud-bar-label">HP</span>
+            <div class="hud-bar hp-bar"><div id="right-hp-fill" class="hud-fill hp-fill"></div></div>
+            <span class="hud-bar-value" id="right-hp-val">100</span>
+          </div>
+          <div class="hud-bar-row">
+            <span class="hud-bar-label">ST</span>
+            <div class="hud-bar st-bar"><div id="right-st-fill" class="hud-fill st-fill"></div></div>
+            <span class="hud-bar-value" id="right-st-val">100</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <article id="right-panel" class="panel">
-          <h2 id="right-name" class="fighter-name">Right Fighter</h2>
-          <div class="stats">HP: <strong id="right-hp-value">0</strong></div>
-          <div class="bar"><div id="right-hp-bar" class="fill hp"></div></div>
-          <div class="stats">Stamina: <strong id="right-st-value">0</strong></div>
-          <div class="bar"><div id="right-st-bar" class="fill stamina"></div></div>
-          <div class="stats">Action: <strong id="right-action">-</strong></div>
-        </article>
-      </section>
+    <!-- Arena Stage -->
+    <div class="arena" id="arena">
+      <div class="arena-floor"></div>
 
-      <section class="controls">
-        <button id="prev-step" type="button">Previous</button>
-        <button id="next-step" type="button">Next</button>
-        <button id="autoplay" type="button">Play</button>
-        <button id="reset" type="button">Reset</button>
-      </section>
+      <!-- Impact / event effects -->
+      <div class="impact-text" id="impact-text"></div>
 
-      <section class="log panel">
-        <strong>Recent Action History</strong>
-        <ul id="history-list"></ul>
-      </section>
-    </main>
-    <script type="module" src="./app.js"></script>
+      <!-- Left Fighter -->
+      <div class="fighter" id="fighter-left">
+        <div class="fighter-body">
+          <div class="head"></div>
+          <div class="torso"></div>
+          <div class="arm arm-lead"></div>
+          <div class="arm arm-rear"></div>
+          <div class="leg leg-lead"></div>
+          <div class="leg leg-rear"></div>
+          <!-- Shield (visible on block) -->
+          <div class="shield"></div>
+          <!-- Weapon glow for attacks -->
+          <div class="attack-fx"></div>
+        </div>
+        <div class="fighter-shadow"></div>
+      </div>
+
+      <!-- Right Fighter -->
+      <div class="fighter flipped" id="fighter-right">
+        <div class="fighter-body">
+          <div class="head"></div>
+          <div class="torso"></div>
+          <div class="arm arm-lead"></div>
+          <div class="arm arm-rear"></div>
+          <div class="leg leg-lead"></div>
+          <div class="leg leg-rear"></div>
+          <div class="shield"></div>
+          <div class="attack-fx"></div>
+        </div>
+        <div class="fighter-shadow"></div>
+      </div>
+
+      <!-- Damage numbers -->
+      <div class="damage-popup" id="dmg-left"></div>
+      <div class="damage-popup" id="dmg-right"></div>
+    </div>
+
+    <!-- Bottom bar: summary + controls -->
+    <div class="bottom-bar">
+      <div class="summary-text" id="summary">Awaiting match data...</div>
+      <div class="event-tags" id="event-tags"></div>
+      <div class="controls">
+        <button id="btn-prev" title="Previous step">&laquo; Prev</button>
+        <button id="btn-play" title="Auto-play">Play</button>
+        <button id="btn-next" title="Next step">Next &raquo;</button>
+        <button id="btn-reset" title="Reset">Reset</button>
+        <span class="step-info" id="step-info">0 / 0</span>
+        <label class="speed-label">
+          Speed
+          <input type="range" id="speed-slider" min="400" max="2500" value="1200" step="100" />
+        </label>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
   </body>
 </html>
