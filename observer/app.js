@@ -1,283 +1,305 @@
-const HISTORY_WINDOW = 6;
+/* ===== Arena Observer – Animated Fight Viewer ===== */
 
 const state = {
   timeline: null,
   index: 0,
   timer: null,
+  animating: false,
 };
 
+/* ---- DOM refs ---- */
+const $ = (sel) => document.querySelector(sel);
 const el = {
-  title: document.querySelector('#match-title'),
-  round: document.querySelector('#round-number'),
-  distanceBand: document.querySelector('#distance-band'),
-  distanceLane: document.querySelector('#distance-lane'),
-  notes: document.querySelector('#notes'),
-  clashLeft: document.querySelector('#clash-left'),
-  clashRight: document.querySelector('#clash-right'),
-  outcomeLabels: document.querySelector('#outcome-labels'),
-  leftName: document.querySelector('#left-name'),
-  rightName: document.querySelector('#right-name'),
-  leftAction: document.querySelector('#left-action'),
-  rightAction: document.querySelector('#right-action'),
-  leftHpValue: document.querySelector('#left-hp-value'),
-  rightHpValue: document.querySelector('#right-hp-value'),
-  leftStValue: document.querySelector('#left-st-value'),
-  rightStValue: document.querySelector('#right-st-value'),
-  leftHpDelta: document.querySelector('#left-hp-delta'),
-  rightHpDelta: document.querySelector('#right-hp-delta'),
-  leftStDelta: document.querySelector('#left-st-delta'),
-  rightStDelta: document.querySelector('#right-st-delta'),
-  leftHpBar: document.querySelector('#left-hp-bar'),
-  rightHpBar: document.querySelector('#right-hp-bar'),
-  leftStBar: document.querySelector('#left-st-bar'),
-  rightStBar: document.querySelector('#right-st-bar'),
-  leftPanel: document.querySelector('#left-panel'),
-  rightPanel: document.querySelector('#right-panel'),
-  leftMarker: document.querySelector('#left-marker'),
-  rightMarker: document.querySelector('#right-marker'),
-  history: document.querySelector('#history-list'),
-  stepCounter: document.querySelector('#step-counter'),
-  prev: document.querySelector('#prev-step'),
-  next: document.querySelector('#next-step'),
-  reset: document.querySelector('#reset'),
-  autoplay: document.querySelector('#autoplay'),
+  arena: $('#arena'),
+  roundDisplay: $('#round-display'),
+  summary: $('#summary'),
+  eventTags: $('#event-tags'),
+  stepInfo: $('#step-info'),
+  impactText: $('#impact-text'),
+  dmgLeft: $('#dmg-left'),
+  dmgRight: $('#dmg-right'),
+  fighterLeft: $('#fighter-left'),
+  fighterRight: $('#fighter-right'),
+  leftName: $('#left-name'),
+  rightName: $('#right-name'),
+  leftHpFill: $('#left-hp-fill'),
+  rightHpFill: $('#right-hp-fill'),
+  leftStFill: $('#left-st-fill'),
+  rightStFill: $('#right-st-fill'),
+  leftHpVal: $('#left-hp-val'),
+  rightHpVal: $('#right-hp-val'),
+  leftStVal: $('#left-st-val'),
+  rightStVal: $('#right-st-val'),
+  btnPrev: $('#btn-prev'),
+  btnNext: $('#btn-next'),
+  btnPlay: $('#btn-play'),
+  btnReset: $('#btn-reset'),
+  speedSlider: $('#speed-slider'),
 };
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-
-/** Map event tags to display labels with severity class */
-const EVENT_LABELS = {
-  ko: { text: 'KO', cls: 'label-ko' },
-  critical_hp: { text: 'CRITICAL', cls: 'label-danger' },
-  guard_break_success: { text: 'GUARD BREAK', cls: 'label-warn' },
-  heavy_hit: { text: 'HEAVY HIT', cls: 'label-danger' },
-  light_hit: { text: 'HIT', cls: 'label-info' },
-  blocked: { text: 'BLOCKED', cls: 'label-muted' },
-  whiff: { text: 'WHIFF', cls: 'label-muted' },
-  disengage_attempt: { text: 'DISENGAGE', cls: 'label-info' },
-  close_distance: { text: 'CLOSING', cls: 'label-info' },
-  match_start: { text: 'FIGHT', cls: 'label-accent' },
-  round_start: { text: 'NEW ROUND', cls: 'label-muted' },
-  exhausted: { text: 'EXHAUSTED', cls: 'label-warn' },
-  punish: { text: 'PUNISH', cls: 'label-danger' },
-  rest_punished: { text: 'REST PUNISHED', cls: 'label-danger' },
-  chip_damage: { text: 'CHIP', cls: 'label-muted' },
+/* ---- Event → display label mapping ---- */
+const EVENT_MAP = {
+  ko:                  { text: 'KO',            cls: 'tag-ko' },
+  critical_hp:         { text: 'CRITICAL',      cls: 'tag-danger' },
+  guard_break_success: { text: 'GUARD BREAK',   cls: 'tag-warn' },
+  heavy_hit:           { text: 'HEAVY HIT',     cls: 'tag-danger' },
+  light_hit:           { text: 'HIT',           cls: 'tag-info' },
+  blocked:             { text: 'BLOCKED',       cls: 'tag-muted' },
+  whiff:               { text: 'WHIFF',         cls: 'tag-muted' },
+  disengage_attempt:   { text: 'DISENGAGE',     cls: 'tag-info' },
+  close_distance:      { text: 'CLOSING',       cls: 'tag-info' },
+  match_start:         { text: 'FIGHT!',        cls: 'tag-accent' },
+  round_start:         { text: 'NEW ROUND',     cls: 'tag-muted' },
+  exhausted:           { text: 'EXHAUSTED',     cls: 'tag-warn' },
+  punish:              { text: 'PUNISH',        cls: 'tag-danger' },
+  rest_punished:       { text: 'REST PUNISHED', cls: 'tag-danger' },
+  chip_damage:         { text: 'CHIP',          cls: 'tag-muted' },
 };
 
-/** Action display names */
-const ACTION_NAMES = {
-  light_attack: 'Light Attack',
-  heavy_attack: 'Heavy Attack',
-  poke: 'Poke',
-  guard_break: 'Guard Break',
-  block: 'Block',
-  retreat_guard: 'Retreat Guard',
-  dash_forward: 'Dash Forward',
-  dash_back: 'Dash Back',
-  rest: 'Rest',
-  observe: 'Observe',
-};
+/* ---- Impact text triggers (priority order) ---- */
+const IMPACT_PRIORITY = ['ko', 'guard_break_success', 'heavy_hit', 'rest_punished', 'punish', 'critical_hp', 'light_hit'];
 
-/** Action CSS class hints */
-const ACTION_CLASSES = {
-  light_attack: 'action-attack',
-  heavy_attack: 'action-attack',
-  poke: 'action-attack',
-  guard_break: 'action-break',
-  block: 'action-defend',
-  retreat_guard: 'action-defend',
-  dash_forward: 'action-move',
-  dash_back: 'action-move',
-  rest: 'action-rest',
-  observe: 'action-rest',
-};
+/* ---- Helpers ---- */
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-function formatAction(action) {
-  return ACTION_NAMES[action] || action;
+function laneToPositions(lanePct) {
+  // lanePct: 0 = touching, 100 = max distance
+  // Returns left% positions for each fighter within the arena
+  const margin = 8; // % from edges
+  const spread = clamp(lanePct, 0, 100) / 100;
+  const center = 50;
+  const maxHalf = center - margin;
+  const leftPos = center - spread * maxHalf;
+  const rightPos = center + spread * maxHalf;
+  return { leftPct: leftPos, rightPct: rightPos };
 }
 
-function actionClass(action) {
-  return ACTION_CLASSES[action] || '';
+function getSpeed() {
+  return parseInt(el.speedSlider.value, 10);
 }
 
+function getPrevStep() {
+  if (state.index <= 0) return null;
+  return state.timeline.steps[state.index - 1];
+}
+
+/* ---- Load ---- */
 async function loadTimeline() {
-  const response = await fetch('./data/mock-match-timeline.json');
-  if (!response.ok) throw new Error(`Failed to load mock timeline: ${response.status}`);
-  state.timeline = await response.json();
-  init();
+  try {
+    const resp = await fetch('./data/mock-match-timeline.json');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    state.timeline = await resp.json();
+    init();
+  } catch (err) {
+    el.summary.textContent = `Failed to load timeline: ${err.message}`;
+  }
 }
 
+/* ---- Init ---- */
 function init() {
   const { fighters } = state.timeline;
-  el.title.textContent = `Observer: ${fighters.left.name} vs ${fighters.right.name}`;
   el.leftName.textContent = fighters.left.name;
   el.rightName.textContent = fighters.right.name;
 
-  el.prev.addEventListener('click', () => stepBy(-1));
-  el.next.addEventListener('click', () => stepBy(1));
-  el.reset.addEventListener('click', () => setStep(0));
-  el.autoplay.addEventListener('click', toggleAutoplay);
+  el.btnPrev.addEventListener('click', () => goStep(state.index - 1));
+  el.btnNext.addEventListener('click', () => goStep(state.index + 1));
+  el.btnReset.addEventListener('click', () => { stopAutoplay(); goStep(0); });
+  el.btnPlay.addEventListener('click', toggleAutoplay);
 
-  render();
+  renderStep(true);
 }
 
-function setStep(index) {
-  const maxIndex = state.timeline.steps.length - 1;
-  state.index = clamp(index, 0, maxIndex);
-  render();
+/* ---- Navigation ---- */
+function goStep(idx) {
+  if (state.animating) return;
+  const max = state.timeline.steps.length - 1;
+  state.index = clamp(idx, 0, max);
+  renderStep(false);
 }
 
-function stepBy(delta) {
-  setStep(state.index + delta);
-}
-
+/* ---- Autoplay ---- */
 function toggleAutoplay() {
-  if (state.timer) {
-    clearInterval(state.timer);
-    state.timer = null;
-    el.autoplay.textContent = 'Play';
-    return;
-  }
-
-  state.timer = setInterval(() => {
-    if (state.index >= state.timeline.steps.length - 1) {
-      clearInterval(state.timer);
-      state.timer = null;
-      el.autoplay.textContent = 'Play';
-      return;
-    }
-    stepBy(1);
-  }, 900);
-  el.autoplay.textContent = 'Pause';
+  if (state.timer) { stopAutoplay(); return; }
+  el.btnPlay.textContent = 'Pause';
+  scheduleNext();
 }
 
-/** Compute HP/stamina deltas compared to previous step */
-function getDeltas(side) {
-  if (state.index === 0) return { hp: 0, stamina: 0 };
-  const prev = state.timeline.steps[state.index - 1].fighters[side];
-  const curr = state.timeline.steps[state.index].fighters[side];
-  return {
-    hp: curr.hp - prev.hp,
-    stamina: curr.stamina - prev.stamina,
-  };
+function scheduleNext() {
+  const max = state.timeline.steps.length - 1;
+  if (state.index >= max) { stopAutoplay(); return; }
+  state.timer = setTimeout(() => {
+    state.index++;
+    renderStep(false);
+    scheduleNext();
+  }, getSpeed());
 }
 
-function formatDelta(value) {
-  if (value === 0) return '';
-  return value > 0 ? `+${value}` : `${value}`;
+function stopAutoplay() {
+  clearTimeout(state.timer);
+  state.timer = null;
+  el.btnPlay.textContent = 'Play';
 }
 
-function deltaClass(value) {
-  if (value > 0) return 'delta-positive';
-  if (value < 0) return 'delta-negative';
-  return '';
-}
-
-function render() {
+/* ===== RENDER ===== */
+function renderStep(instant) {
   const step = state.timeline.steps[state.index];
+  const prev = getPrevStep();
   const left = step.fighters.left;
   const right = step.fighters.right;
 
-  el.round.textContent = String(step.round);
-  el.distanceBand.textContent = step.distance.band;
-  el.distanceLane.textContent = `${step.distance.lane}% lane separation`;
-  el.notes.textContent = step.summary || 'No notes for this step.';
+  // HUD
+  el.roundDisplay.textContent = `ROUND ${step.round}`;
+  el.stepInfo.textContent = `${state.index + 1} / ${state.timeline.steps.length}`;
+  el.summary.textContent = step.summary || '';
 
-  // Clash display
-  el.clashLeft.textContent = formatAction(left.action);
-  el.clashLeft.className = `clash-action ${actionClass(left.action)}`;
-  el.clashRight.textContent = formatAction(right.action);
-  el.clashRight.className = `clash-action ${actionClass(right.action)}`;
+  // Event tags
+  renderEventTags(step.events);
 
-  // Outcome labels from events
-  renderOutcomeLabels(step.events);
+  // HP / Stamina bars
+  updateBar(el.leftHpFill, el.leftHpVal, left.hp, 100);
+  updateBar(el.rightHpFill, el.rightHpVal, right.hp, 100);
+  updateBar(el.leftStFill, el.leftStVal, left.stamina, 100);
+  updateBar(el.rightStFill, el.rightStVal, right.stamina, 100);
 
-  // Step counter
-  el.stepCounter.textContent = `Step ${state.index + 1} / ${state.timeline.steps.length}`;
+  // Fighter positions
+  const pos = laneToPositions(step.distance.lane);
+  el.fighterLeft.style.left = `calc(${pos.leftPct}% - 30px)`;
+  el.fighterRight.style.left = `calc(${pos.rightPct}% - 30px)`;
 
-  paintFighter('left', left);
-  paintFighter('right', right);
-  paintLane(step.distance.lane);
-  paintHistory();
+  if (instant) return;
+
+  // Animate actions
+  animateActions(step, prev);
 }
 
-function renderOutcomeLabels(events) {
-  el.outcomeLabels.innerHTML = '';
+function updateBar(fillEl, valEl, value, max) {
+  const pct = clamp((value / max) * 100, 0, 100);
+  fillEl.style.width = `${pct}%`;
+  valEl.textContent = value;
+
+  // HP bar color via background-position (gradient trick)
+  if (fillEl.classList.contains('hp-fill')) {
+    // 0% hp → show red (left of gradient), 100% → show green (right)
+    fillEl.style.backgroundPosition = `${100 - pct}% 0`;
+  }
+}
+
+function renderEventTags(events) {
+  el.eventTags.innerHTML = '';
   events.forEach((evt) => {
-    const cfg = EVENT_LABELS[evt];
+    const cfg = EVENT_MAP[evt];
     const span = document.createElement('span');
-    span.className = `outcome-label ${cfg ? cfg.cls : 'label-muted'}`;
+    span.className = `event-tag ${cfg ? cfg.cls : 'tag-muted'}`;
     span.textContent = cfg ? cfg.text : evt.toUpperCase().replace(/_/g, ' ');
-    el.outcomeLabels.appendChild(span);
+    el.eventTags.appendChild(span);
   });
 }
 
-function paintFighter(side, fighterStep) {
-  const isLeft = side === 'left';
-  const hp = fighterStep.hp;
-  const stamina = fighterStep.stamina;
-  const panel = isLeft ? el.leftPanel : el.rightPanel;
-  const deltas = getDeltas(side);
+/* ===== ANIMATIONS ===== */
 
-  // Action
-  const actionEl = isLeft ? el.leftAction : el.rightAction;
-  actionEl.textContent = formatAction(fighterStep.action);
-  actionEl.className = `action-label ${actionClass(fighterStep.action)}`;
+function animateActions(step, prev) {
+  const leftAction = step.fighters.left.action;
+  const rightAction = step.fighters.right.action;
+  const events = step.events;
 
-  // Values
-  (isLeft ? el.leftHpValue : el.rightHpValue).textContent = `${hp}`;
-  (isLeft ? el.leftStValue : el.rightStValue).textContent = `${stamina}`;
+  // Clear previous animations
+  clearAnimClasses(el.fighterLeft);
+  clearAnimClasses(el.fighterRight);
 
-  // Bars
-  (isLeft ? el.leftHpBar : el.rightHpBar).style.width = `${clamp(hp, 0, 100)}%`;
-  (isLeft ? el.leftStBar : el.rightStBar).style.width = `${clamp(stamina, 0, 100)}%`;
+  // Force reflow so animations restart
+  void el.fighterLeft.offsetWidth;
+  void el.fighterRight.offsetWidth;
 
-  // Deltas
-  const hpDeltaEl = isLeft ? el.leftHpDelta : el.rightHpDelta;
-  const stDeltaEl = isLeft ? el.leftStDelta : el.rightStDelta;
-  hpDeltaEl.textContent = formatDelta(deltas.hp);
-  hpDeltaEl.className = `delta ${deltaClass(deltas.hp)}`;
-  stDeltaEl.textContent = formatDelta(deltas.stamina);
-  stDeltaEl.className = `delta ${deltaClass(deltas.stamina)}`;
+  // Apply action animations
+  el.fighterLeft.classList.add(`anim-${leftAction}`);
+  el.fighterRight.classList.add(`anim-${rightAction}`);
 
-  // State classes
-  panel.classList.toggle('low', hp <= 25);
-  panel.classList.toggle('exhausted', stamina <= 20);
+  // Calculate damage deltas
+  const leftDmg = prev ? prev.fighters.left.hp - step.fighters.left.hp : 0;
+  const rightDmg = prev ? prev.fighters.right.hp - step.fighters.right.hp : 0;
+
+  // Determine who got hit based on HP decrease
+  const animDelay = 200; // ms before showing hit reaction
+
+  // Hit reactions & damage popups
+  if (leftDmg > 0) {
+    setTimeout(() => {
+      showHitReaction(el.fighterLeft, leftDmg, events.includes('ko') && step.fighters.left.hp <= 0);
+      showDamagePopup(el.dmgLeft, leftDmg, el.fighterLeft);
+    }, animDelay);
+  }
+  if (rightDmg > 0) {
+    setTimeout(() => {
+      showHitReaction(el.fighterRight, rightDmg, events.includes('ko') && step.fighters.right.hp <= 0);
+      showDamagePopup(el.dmgRight, rightDmg, el.fighterRight);
+    }, animDelay);
+  }
+
+  // Stamina recovery popup
+  if (prev) {
+    const leftStGain = step.fighters.left.stamina - prev.fighters.left.stamina;
+    const rightStGain = step.fighters.right.stamina - prev.fighters.right.stamina;
+    if (leftStGain > 5) {
+      setTimeout(() => showDamagePopup(el.dmgLeft, leftStGain, el.fighterLeft, true), animDelay);
+    }
+    if (rightStGain > 5) {
+      setTimeout(() => showDamagePopup(el.dmgRight, rightStGain, el.fighterRight, true), animDelay);
+    }
+  }
+
+  // Impact text for significant events
+  const impactEvt = IMPACT_PRIORITY.find((e) => events.includes(e));
+  if (impactEvt) {
+    const cfg = EVENT_MAP[impactEvt];
+    setTimeout(() => showImpactText(cfg ? cfg.text : impactEvt), animDelay + 50);
+  }
+
+  // Screen shake on heavy events
+  if (events.includes('ko') || events.includes('heavy_hit') || events.includes('guard_break_success')) {
+    setTimeout(() => {
+      el.arena.classList.remove('screen-shake');
+      void el.arena.offsetWidth;
+      el.arena.classList.add('screen-shake');
+    }, animDelay);
+  }
 }
 
-function paintLane(distanceLanePercent) {
-  const gap = clamp(distanceLanePercent, 8, 90);
-  const leftPos = clamp(50 - gap / 2, 2, 90);
-  const rightPos = clamp(50 + gap / 2, 6, 98);
+const ANIM_CLASSES = [
+  'anim-light_attack', 'anim-heavy_attack', 'anim-poke', 'anim-guard_break',
+  'anim-block', 'anim-retreat_guard', 'anim-dash_forward', 'anim-dash_back',
+  'anim-rest', 'anim-observe', 'hit-flash', 'ko-fall',
+];
 
-  el.leftMarker.style.left = `calc(${leftPos}% - 10px)`;
-  el.rightMarker.style.left = `calc(${rightPos}% - 10px)`;
+function clearAnimClasses(fighterEl) {
+  ANIM_CLASSES.forEach((cls) => fighterEl.classList.remove(cls));
 }
 
-function paintHistory() {
-  const start = Math.max(0, state.index - HISTORY_WINDOW + 1);
-  const recent = state.timeline.steps.slice(start, state.index + 1);
-
-  el.history.innerHTML = '';
-  recent.forEach((step, idx) => {
-    const item = document.createElement('li');
-    if (start + idx === state.index) item.classList.add('current-step');
-
-    const leftAct = formatAction(step.fighters.left.action);
-    const rightAct = formatAction(step.fighters.right.action);
-    const evtLabels = step.events
-      .map((e) => {
-        const cfg = EVENT_LABELS[e];
-        return cfg ? cfg.text : e.toUpperCase().replace(/_/g, ' ');
-      })
-      .join(', ');
-
-    item.innerHTML = `<span class="hist-round">R${step.round}</span> <span class="hist-clash">${leftAct} vs ${rightAct}</span> <span class="hist-events">${evtLabels}</span>`;
-    el.history.appendChild(item);
-  });
+function showHitReaction(fighterEl, dmg, isKo) {
+  if (isKo) {
+    fighterEl.classList.add('ko-fall');
+  } else {
+    fighterEl.classList.add('hit-flash');
+    setTimeout(() => fighterEl.classList.remove('hit-flash'), 350);
+  }
 }
 
-loadTimeline().catch((error) => {
-  console.error(error);
-  el.notes.textContent = `Could not load timeline: ${error.message}`;
-});
+function showDamagePopup(popupEl, value, fighterEl, isHeal) {
+  const rect = fighterEl.getBoundingClientRect();
+  const arenaRect = el.arena.getBoundingClientRect();
+  popupEl.style.left = `${rect.left - arenaRect.left + 15}px`;
+  popupEl.style.top = `${rect.top - arenaRect.top - 10}px`;
+  popupEl.textContent = isHeal ? `+${value}` : `-${value}`;
+  popupEl.className = `damage-popup show${isHeal ? ' heal' : ''}`;
+
+  // Reset after animation
+  setTimeout(() => { popupEl.className = 'damage-popup'; }, 800);
+}
+
+function showImpactText(text) {
+  el.impactText.textContent = text;
+  el.impactText.className = 'impact-text show';
+  setTimeout(() => { el.impactText.className = 'impact-text'; }, 700);
+}
+
+/* ---- Boot ---- */
+loadTimeline();
