@@ -77,7 +77,6 @@ body{
 }
 .fighter-body{
   position:relative;width:60px;height:110px;
-  transition:transform .15s ease;
 }
 .flipped .fighter-body{transform:scaleX(-1)}
 
@@ -99,7 +98,7 @@ body{
   width:8px;height:32px;border-radius:4px;
   position:absolute;top:22px;
   transform-origin:top center;
-  transition:transform .2s ease;
+  transition:transform .15s ease;
 }
 .arm-lead{right:2px}
 .arm-rear{left:2px}
@@ -110,7 +109,7 @@ body{
   width:10px;height:30px;border-radius:3px;
   position:absolute;bottom:-22px;
   transform-origin:top center;
-  transition:transform .2s ease;
+  transition:transform .15s ease;
 }
 .leg-lead{right:10px}
 .leg-rear{left:10px}
@@ -129,12 +128,12 @@ body{
 }
 .flipped .shield{left:-10px;right:auto;border-radius:10px 3px 3px 10px}
 
-/* Attack FX */
+/* Attack FX (glow on fist) */
 .attack-fx{
   position:absolute;top:15px;right:-24px;
   width:30px;height:30px;border-radius:50%;
   background:radial-gradient(circle,rgba(250,204,21,.8),transparent);
-  opacity:0;transition:opacity .1s;
+  opacity:0;
   filter:blur(2px);
 }
 .flipped .attack-fx{left:-24px;right:auto}
@@ -147,112 +146,185 @@ body{
   filter:blur(3px);
 }
 
-/* ===== Action Animations ===== */
-
-/* --- Idle breathing --- */
+/* ===== Idle breathing (default) ===== */
 .fighter-body{animation:idle 2s ease-in-out infinite}
 @keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 .flipped .fighter-body{animation:idle-flip 2s ease-in-out infinite}
 @keyframes idle-flip{0%,100%{transform:scaleX(-1) translateY(0)}50%{transform:scaleX(-1) translateY(-2px)}}
 
-/* --- Light Attack --- */
-.anim-light_attack .fighter-body{animation:jab .4s ease-out}
+/* ===== Action Animations (body-part only, NO translateX lunge) ===== */
+
+/* --- Light Attack: arm punch --- */
+.anim-light_attack .fighter-body{animation:none}
+.flipped.anim-light_attack .fighter-body{animation:none;transform:scaleX(-1)}
 .anim-light_attack .arm-lead{animation:punch .4s ease-out}
 .anim-light_attack .attack-fx{animation:flash-fx .3s ease-out .1s}
-@keyframes jab{0%{transform:translateX(0)}30%{transform:translateX(25px)}100%{transform:translateX(0)}}
 @keyframes punch{0%{transform:rotate(0)}20%{transform:rotate(-80deg)}100%{transform:rotate(0)}}
 @keyframes flash-fx{0%{opacity:0;transform:scale(.3)}40%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(.5)}}
 
-.flipped.anim-light_attack .fighter-body{animation:jab-flip .4s ease-out}
-@keyframes jab-flip{0%{transform:scaleX(-1)}30%{transform:scaleX(-1) translateX(-25px)}100%{transform:scaleX(-1)}}
-
-/* --- Heavy Attack --- */
-.anim-heavy_attack .fighter-body{animation:heavy-swing .6s ease-out}
+/* --- Heavy Attack: wind-up + big arm swing --- */
+.anim-heavy_attack .fighter-body{animation:heavy-windup .6s ease-out}
+.flipped.anim-heavy_attack .fighter-body{animation:heavy-windup-flip .6s ease-out}
 .anim-heavy_attack .arm-lead{animation:heavy-arm .6s ease-out}
 .anim-heavy_attack .attack-fx{animation:heavy-fx .5s ease-out .15s}
-@keyframes heavy-swing{0%{transform:translateX(0) translateY(0)}15%{transform:translateX(-8px) translateY(-10px)}45%{transform:translateX(35px) translateY(5px)}100%{transform:translateX(0) translateY(0)}}
+@keyframes heavy-windup{0%{transform:translateY(0)}15%{transform:translateY(-12px)}45%{transform:translateY(4px)}100%{transform:translateY(0)}}
+@keyframes heavy-windup-flip{0%{transform:scaleX(-1)}15%{transform:scaleX(-1) translateY(-12px)}45%{transform:scaleX(-1) translateY(4px)}100%{transform:scaleX(-1)}}
 @keyframes heavy-arm{0%{transform:rotate(0)}15%{transform:rotate(60deg)}40%{transform:rotate(-110deg)}100%{transform:rotate(0)}}
 @keyframes heavy-fx{0%{opacity:0;transform:scale(.2)}30%{opacity:1;transform:scale(1.8)}100%{opacity:0;transform:scale(.8)}}
 
-.flipped.anim-heavy_attack .fighter-body{animation:heavy-swing-flip .6s ease-out}
-@keyframes heavy-swing-flip{0%{transform:scaleX(-1)}15%{transform:scaleX(-1) translateX(8px) translateY(-10px)}45%{transform:scaleX(-1) translateX(-35px) translateY(5px)}100%{transform:scaleX(-1)}}
-
-/* --- Poke --- */
-.anim-poke .fighter-body{animation:poke-lunge .35s ease-out}
+/* --- Poke: quick arm thrust --- */
+.anim-poke .fighter-body{animation:none}
+.flipped.anim-poke .fighter-body{animation:none;transform:scaleX(-1)}
 .anim-poke .arm-lead{animation:poke-arm .35s ease-out}
 .anim-poke .attack-fx{animation:flash-fx .25s ease-out .08s}
-@keyframes poke-lunge{0%{transform:translateX(0)}35%{transform:translateX(18px)}100%{transform:translateX(0)}}
 @keyframes poke-arm{0%{transform:rotate(0)}30%{transform:rotate(-60deg)}100%{transform:rotate(0)}}
 
-.flipped.anim-poke .fighter-body{animation:poke-lunge-flip .35s ease-out}
-@keyframes poke-lunge-flip{0%{transform:scaleX(-1)}35%{transform:scaleX(-1) translateX(-18px)}100%{transform:scaleX(-1)}}
-
-/* --- Guard Break --- */
-.anim-guard_break .fighter-body{animation:gb-slam .55s ease-out}
+/* --- Guard Break: overhead slam --- */
+.anim-guard_break .fighter-body{animation:gb-windup .55s ease-out}
+.flipped.anim-guard_break .fighter-body{animation:gb-windup-flip .55s ease-out}
 .anim-guard_break .arm-lead,.anim-guard_break .arm-rear{animation:gb-arms .55s ease-out}
 .anim-guard_break .attack-fx{animation:gb-fx .4s ease-out .2s}
-@keyframes gb-slam{0%{transform:translateX(0) translateY(0)}20%{transform:translateX(0) translateY(-15px)}50%{transform:translateX(30px) translateY(8px)}100%{transform:translateX(0) translateY(0)}}
+@keyframes gb-windup{0%{transform:translateY(0)}20%{transform:translateY(-16px)}50%{transform:translateY(6px)}100%{transform:translateY(0)}}
+@keyframes gb-windup-flip{0%{transform:scaleX(-1)}20%{transform:scaleX(-1) translateY(-16px)}50%{transform:scaleX(-1) translateY(6px)}100%{transform:scaleX(-1)}}
 @keyframes gb-arms{0%{transform:rotate(0)}20%{transform:rotate(80deg)}50%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
 @keyframes gb-fx{0%{opacity:0;transform:scale(.5)}30%{opacity:1;transform:scale(2)}100%{opacity:0;transform:scale(1)}}
 
-.flipped.anim-guard_break .fighter-body{animation:gb-slam-flip .55s ease-out}
-@keyframes gb-slam-flip{0%{transform:scaleX(-1)}20%{transform:scaleX(-1) translateY(-15px)}50%{transform:scaleX(-1) translateX(-30px) translateY(8px)}100%{transform:scaleX(-1)}}
-
-/* --- Block --- */
+/* --- Block: shield + brace --- */
 .anim-block .shield{opacity:1}
-.anim-block .fighter-body{animation:block-brace .4s ease-out forwards}
-.anim-block .arm-lead{animation:block-arm .4s ease-out forwards}
-@keyframes block-brace{0%{transform:translateX(0)}100%{transform:translateX(-5px)}}
-@keyframes block-arm{0%{transform:rotate(0)}100%{transform:rotate(-30deg)}}
+.anim-block .fighter-body{animation:block-brace .3s ease-out forwards}
+.anim-block .arm-lead{animation:block-arm .3s ease-out forwards}
+@keyframes block-brace{to{transform:translateX(-4px)}}
+@keyframes block-arm{to{transform:rotate(-30deg)}}
+.flipped.anim-block .fighter-body{animation:block-brace-flip .3s ease-out forwards}
+@keyframes block-brace-flip{to{transform:scaleX(-1) translateX(4px)}}
 
-.flipped.anim-block .fighter-body{animation:block-brace-flip .4s ease-out forwards}
-@keyframes block-brace-flip{0%{transform:scaleX(-1)}100%{transform:scaleX(-1) translateX(5px)}}
-
-/* --- Retreat Guard --- */
+/* --- Retreat Guard: shield + step back --- */
 .anim-retreat_guard .shield{opacity:1}
-.anim-retreat_guard .fighter-body{animation:retreat .5s ease-out}
-@keyframes retreat{0%{transform:translateX(0)}40%{transform:translateX(-30px)}100%{transform:translateX(0)}}
-
-.flipped.anim-retreat_guard .fighter-body{animation:retreat-flip .5s ease-out}
-@keyframes retreat-flip{0%{transform:scaleX(-1)}40%{transform:scaleX(-1) translateX(30px)}100%{transform:scaleX(-1)}}
+.anim-retreat_guard .fighter-body{animation:retreat-body .5s ease-out}
+@keyframes retreat-body{0%{transform:translateX(0)}40%{transform:translateX(-20px)}100%{transform:translateX(0)}}
+.flipped.anim-retreat_guard .fighter-body{animation:retreat-body-flip .5s ease-out}
+@keyframes retreat-body-flip{0%{transform:scaleX(-1)}40%{transform:scaleX(-1) translateX(20px)}100%{transform:scaleX(-1)}}
 
 /* --- Dash Forward --- */
-.anim-dash_forward .fighter-body{animation:dash-fwd .45s ease-out}
 .anim-dash_forward .leg-lead,.anim-dash_forward .leg-rear{animation:dash-legs .45s ease-out}
-@keyframes dash-fwd{0%{transform:translateX(0) translateY(0)}30%{transform:translateX(40px) translateY(-8px)}100%{transform:translateX(0) translateY(0)}}
 @keyframes dash-legs{0%{transform:rotate(0)}20%{transform:rotate(-30deg)}60%{transform:rotate(20deg)}100%{transform:rotate(0)}}
 
-.flipped.anim-dash_forward .fighter-body{animation:dash-fwd-flip .45s ease-out}
-@keyframes dash-fwd-flip{0%{transform:scaleX(-1)}30%{transform:scaleX(-1) translateX(-40px) translateY(-8px)}100%{transform:scaleX(-1)}}
-
 /* --- Dash Back --- */
-.anim-dash_back .fighter-body{animation:dash-back .45s ease-out}
-@keyframes dash-back{0%{transform:translateX(0) translateY(0)}30%{transform:translateX(-35px) translateY(-6px)}100%{transform:translateX(0) translateY(0)}}
+.anim-dash_back .leg-lead,.anim-dash_back .leg-rear{animation:dash-legs-back .45s ease-out}
+@keyframes dash-legs-back{0%{transform:rotate(0)}20%{transform:rotate(20deg)}60%{transform:rotate(-15deg)}100%{transform:rotate(0)}}
 
-.flipped.anim-dash_back .fighter-body{animation:dash-back-flip .45s ease-out}
-@keyframes dash-back-flip{0%{transform:scaleX(-1)}30%{transform:scaleX(-1) translateX(35px) translateY(-6px)}100%{transform:scaleX(-1)}}
-
-/* --- Rest --- */
+/* --- Rest: breathing --- */
 .anim-rest .fighter-body{animation:rest-breathe .8s ease-in-out}
 @keyframes rest-breathe{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(3px) scale(.97)}}
-
 .flipped.anim-rest .fighter-body{animation:rest-breathe-flip .8s ease-in-out}
 @keyframes rest-breathe-flip{0%,100%{transform:scaleX(-1) translateY(0) scale(1)}50%{transform:scaleX(-1) translateY(3px) scale(.97)}}
 
-/* --- Observe (idle stance) --- */
+/* --- Observe (no anim) --- */
 .anim-observe .fighter-body{animation:none}
+.flipped.anim-observe .fighter-body{animation:none;transform:scaleX(-1)}
 
-/* ===== Hit reaction ===== */
-.hit-flash .fighter-body{animation:hit-shake .35s ease-out !important;filter:brightness(2) saturate(0) !important}
-@keyframes hit-shake{0%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(3px)}100%{transform:translateX(0)}}
-.flipped.hit-flash .fighter-body{animation:hit-shake-flip .35s ease-out !important;filter:brightness(2) saturate(0) !important}
-@keyframes hit-shake-flip{0%{transform:scaleX(-1)}20%{transform:scaleX(-1) translateX(8px)}40%{transform:scaleX(-1) translateX(-8px)}60%{transform:scaleX(-1) translateX(5px)}80%{transform:scaleX(-1) translateX(-3px)}100%{transform:scaleX(-1)}}
+/* ===== Hit Reaction ===== */
+.hit-flash .fighter-body{
+  animation:hit-shake .35s ease-out !important;
+  filter:brightness(2.5) saturate(0) drop-shadow(0 0 8px #ef4444) !important;
+}
+@keyframes hit-shake{
+  0%{transform:translateX(0)}
+  20%{transform:translateX(-10px)}
+  40%{transform:translateX(10px)}
+  60%{transform:translateX(-6px)}
+  80%{transform:translateX(4px)}
+  100%{transform:translateX(0)}
+}
+.flipped.hit-flash .fighter-body{
+  animation:hit-shake-flip .35s ease-out !important;
+  filter:brightness(2.5) saturate(0) drop-shadow(0 0 8px #ef4444) !important;
+}
+@keyframes hit-shake-flip{
+  0%{transform:scaleX(-1)}
+  20%{transform:scaleX(-1) translateX(10px)}
+  40%{transform:scaleX(-1) translateX(-10px)}
+  60%{transform:scaleX(-1) translateX(6px)}
+  80%{transform:scaleX(-1) translateX(-4px)}
+  100%{transform:scaleX(-1)}
+}
 
-/* KO fall */
+/* KO collapse */
 .ko-fall .fighter-body{animation:ko-collapse .8s ease-in forwards !important}
-@keyframes ko-collapse{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(20px) rotate(80deg);opacity:.4}}
+@keyframes ko-collapse{0%{transform:translateY(0) rotate(0);opacity:1}100%{transform:translateY(25px) rotate(85deg);opacity:.3}}
 .flipped.ko-fall .fighter-body{animation:ko-collapse-flip .8s ease-in forwards !important}
-@keyframes ko-collapse-flip{0%{transform:scaleX(-1)}100%{transform:scaleX(-1) translateY(20px) rotate(-80deg);opacity:.4}}
+@keyframes ko-collapse-flip{0%{transform:scaleX(-1);opacity:1}100%{transform:scaleX(-1) translateY(25px) rotate(-85deg);opacity:.3}}
+
+/* ===== Contact Spark (at impact point) ===== */
+.contact-spark{
+  position:absolute;pointer-events:none;z-index:25;
+  width:0;height:0;opacity:0;
+}
+.contact-spark.show .spark-core{
+  animation:spark-burst .35s ease-out forwards;
+}
+.contact-spark.show .spark-ring{
+  animation:spark-ring-expand .4s ease-out forwards;
+}
+.spark-core{
+  position:absolute;
+  width:24px;height:24px;
+  left:-12px;top:-12px;
+  border-radius:50%;
+  background:radial-gradient(circle,#fff 0%,#fbbf24 40%,transparent 70%);
+  opacity:0;
+  filter:blur(1px);
+}
+@keyframes spark-burst{
+  0%{opacity:0;transform:scale(.2)}
+  20%{opacity:1;transform:scale(1.6)}
+  50%{opacity:.9;transform:scale(1)}
+  100%{opacity:0;transform:scale(.4)}
+}
+.spark-ring{
+  position:absolute;
+  width:50px;height:50px;
+  left:-25px;top:-25px;
+  border-radius:50%;
+  border:3px solid rgba(251,191,35,.7);
+  opacity:0;
+}
+@keyframes spark-ring-expand{
+  0%{opacity:0;transform:scale(.3)}
+  20%{opacity:.8;transform:scale(.6)}
+  100%{opacity:0;transform:scale(1.8)}
+}
+
+/* Heavy spark (for guard_break, heavy_attack) */
+.contact-spark.heavy .spark-core{
+  width:36px;height:36px;left:-18px;top:-18px;
+  background:radial-gradient(circle,#fff 0%,#f97316 35%,#ef4444 60%,transparent 75%);
+  animation:spark-burst-heavy .45s ease-out forwards;
+}
+.contact-spark.heavy .spark-ring{
+  width:70px;height:70px;left:-35px;top:-35px;
+  border-color:rgba(249,115,22,.8);
+  animation:spark-ring-heavy .5s ease-out forwards;
+}
+@keyframes spark-burst-heavy{
+  0%{opacity:0;transform:scale(.2)}
+  15%{opacity:1;transform:scale(2)}
+  40%{opacity:.9;transform:scale(1.2)}
+  100%{opacity:0;transform:scale(.5)}
+}
+@keyframes spark-ring-heavy{
+  0%{opacity:0;transform:scale(.2)}
+  15%{opacity:.9;transform:scale(.5)}
+  100%{opacity:0;transform:scale(2.2)}
+}
+
+/* Block spark (blue, weaker) */
+.contact-spark.blocked .spark-core{
+  background:radial-gradient(circle,#fff 0%,#60a5fa 50%,transparent 75%);
+}
+.contact-spark.blocked .spark-ring{
+  border-color:rgba(96,165,250,.6);
+}
 
 /* ===== Impact Text ===== */
 .impact-text{
@@ -260,24 +332,39 @@ body{
   font-size:2.2rem;font-weight:900;letter-spacing:3px;text-transform:uppercase;
   color:#fff;text-shadow:0 0 30px rgba(250,204,21,.8),0 0 60px rgba(239,68,68,.4);
   opacity:0;z-index:20;pointer-events:none;
-  transition:none;
 }
 .impact-text.show{animation:impact-pop .7s ease-out forwards}
-@keyframes impact-pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}30%{transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
+@keyframes impact-pop{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}
+  15%{opacity:1;transform:translate(-50%,-50%) scale(1.3)}
+  30%{transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0;transform:translate(-50%,-60%) scale(1)}
+}
 
 /* ===== Damage Popup ===== */
 .damage-popup{
-  position:absolute;font-size:1.4rem;font-weight:900;
-  color:#ef4444;text-shadow:0 0 8px rgba(239,68,68,.6);
+  position:absolute;font-size:1.5rem;font-weight:900;
+  color:#ef4444;text-shadow:0 2px 8px rgba(239,68,68,.7);
   opacity:0;pointer-events:none;z-index:15;
 }
-.damage-popup.show{animation:dmg-float .8s ease-out forwards}
-@keyframes dmg-float{0%{opacity:0;transform:translateY(0) scale(.6)}15%{opacity:1;transform:translateY(-10px) scale(1.2)}100%{opacity:0;transform:translateY(-50px) scale(.8)}}
-.damage-popup.heal{color:#22c55e;text-shadow:0 0 8px rgba(34,197,94,.6)}
+.damage-popup.show{animation:dmg-float .9s ease-out forwards}
+@keyframes dmg-float{
+  0%{opacity:0;transform:translateY(0) scale(.5)}
+  12%{opacity:1;transform:translateY(-8px) scale(1.3)}
+  100%{opacity:0;transform:translateY(-55px) scale(.7)}
+}
+.damage-popup.heal{color:#22c55e;text-shadow:0 2px 8px rgba(34,197,94,.7)}
 
-/* ===== Screen shake on heavy hits ===== */
+/* ===== Screen shake ===== */
 .screen-shake{animation:screen-shake .3s ease-out}
-@keyframes screen-shake{0%{transform:translate(0)}20%{transform:translate(-4px,3px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-2px,2px)}80%{transform:translate(2px,-1px)}100%{transform:translate(0)}}
+@keyframes screen-shake{
+  0%{transform:translate(0)}
+  20%{transform:translate(-5px,4px)}
+  40%{transform:translate(5px,-3px)}
+  60%{transform:translate(-3px,2px)}
+  80%{transform:translate(3px,-1px)}
+  100%{transform:translate(0)}
+}
 
 /* ===== Bottom Bar ===== */
 .bottom-bar{
