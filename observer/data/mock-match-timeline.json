@@ -35,8 +35,8 @@
         "left": { "hp": 100, "stamina": 86, "action": "poke" },
         "right": { "hp": 96, "stamina": 90, "action": "retreat_guard" }
       },
-      "summary": "A fast poke clips Bram as he retreats under guard.",
-      "events": ["light_hit", "disengage_attempt"]
+      "summary": "A fast poke clips Bram as he retreats under guard. Chip damage leaks through.",
+      "events": ["light_hit", "chip_damage", "disengage_attempt"]
     },
     {
       "step": 3,
@@ -79,7 +79,7 @@
         "left": { "hp": 84, "stamina": 80, "action": "guard_break" },
         "right": { "hp": 66, "stamina": 70, "action": "block" }
       },
-      "summary": "Astra answers with a heavy guard break into body damage.",
+      "summary": "Astra answers with a heavy guard break. Bram's guard crumbles.",
       "events": ["guard_break_success", "heavy_hit"]
     },
     {
@@ -90,8 +90,8 @@
         "left": { "hp": 84, "stamina": 74, "action": "poke" },
         "right": { "hp": 14, "stamina": 60, "action": "rest" }
       },
-      "summary": "Astra keeps pressure with a clean poke while Bram tries to recover.",
-      "events": ["round_start", "critical_hp"]
+      "summary": "Astra keeps pressure with a clean poke while Bram tries to recover. Rest punished!",
+      "events": ["round_start", "light_hit", "rest_punished", "critical_hp"]
     },
     {
       "step": 8,
@@ -102,7 +102,7 @@
         "right": { "hp": 0, "stamina": 48, "action": "block" }
       },
       "summary": "Final exchange: Astra breaks guard again and secures the KO.",
-      "events": ["ko"]
+      "events": ["guard_break_success", "ko"]
     }
   ]
 }

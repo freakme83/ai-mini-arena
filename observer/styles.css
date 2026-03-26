@@ -8,6 +8,7 @@
   --accent: #22c55e;
   --warn: #f59e0b;
   --danger: #ef4444;
+  --info: #38bdf8;
 }
 
 * { box-sizing: border-box; }
@@ -30,7 +31,7 @@ header p { margin: 4px 0 0; color: var(--muted); }
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr minmax(240px, 280px) 1fr;
+  grid-template-columns: 1fr minmax(260px, 300px) 1fr;
   gap: 12px;
 }
 .panel {
@@ -46,6 +47,9 @@ header p { margin: 4px 0 0; color: var(--muted); }
 .stats {
   font-size: 0.88rem;
   color: var(--muted);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
 .bar {
   background: #0b1220;
@@ -57,13 +61,35 @@ header p { margin: 4px 0 0; color: var(--muted); }
 .fill {
   height: 100%;
   width: 0%;
-  transition: width 120ms ease;
+  transition: width 200ms ease;
 }
 .fill.hp { background: linear-gradient(90deg, #16a34a, #84cc16); }
 .fill.stamina { background: linear-gradient(90deg, #3b82f6, #06b6d4); }
 .low .fill.hp { background: var(--danger); }
 .exhausted .fill.stamina { background: var(--warn); }
 
+/* Delta indicators */
+.delta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-left: 2px;
+}
+.delta-positive { color: var(--accent); }
+.delta-negative { color: var(--danger); }
+
+/* Action labels */
+.action-label {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.action-attack { color: #fbbf24; }
+.action-break { color: #f97316; }
+.action-defend { color: #38bdf8; }
+.action-move { color: #a78bfa; }
+.action-rest { color: #94a3b8; }
+
+/* Center panel */
 .center {
   text-align: center;
 }
@@ -71,10 +97,87 @@ header p { margin: 4px 0 0; color: var(--muted); }
   font-size: 0.85rem;
   color: var(--muted);
 }
-.exchange {
-  margin-top: 8px;
-  font-size: 0.92rem;
+
+/* Clash display */
+.clash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0 6px;
+  padding: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid #334155;
+  border-radius: 8px;
 }
+.clash-action {
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(51, 65, 85, 0.5);
+}
+.clash-vs {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+/* Outcome labels */
+.outcome-labels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px 0;
+  min-height: 24px;
+}
+.outcome-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.label-ko {
+  background: var(--danger);
+  color: #fff;
+  animation: pulse 0.6s ease-in-out infinite alternate;
+}
+.label-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+.label-warn {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+.label-info {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.label-accent {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+.label-muted {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+@keyframes pulse {
+  from { opacity: 1; }
+  to { opacity: 0.6; }
+}
+
+/* Distance lane */
 .lane {
   margin-top: 10px;
   position: relative;
@@ -93,13 +196,16 @@ header p { margin: 4px 0 0; color: var(--muted); }
   place-items: center;
   font-size: 0.65rem;
   font-weight: 700;
+  transition: left 200ms ease;
 }
 .marker.left { background: #22c55e; color: #052e16; }
 .marker.right { background: #f97316; color: #431407; }
 
+/* Controls */
 .controls {
   margin-top: 14px;
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -112,7 +218,13 @@ button {
   cursor: pointer;
 }
 button:hover { background: #334155; }
+.step-counter {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-left: auto;
+}
 
+/* History log */
 .log {
   margin-top: 14px;
 }
@@ -127,11 +239,29 @@ button:hover { background: #334155; }
   background: rgba(51, 65, 85, 0.5);
   border: 1px solid #475569;
   border-radius: 8px;
-  padding: 8px;
+  padding: 8px 10px;
   font-size: 0.84rem;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
 }
 .current-step {
   border-color: var(--accent);
+}
+.hist-round {
+  font-weight: 700;
+  color: var(--muted);
+  min-width: 28px;
+}
+.hist-clash {
+  color: var(--text);
+}
+.hist-events {
+  margin-left: auto;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #fcd34d;
 }
 
 @media (max-width: 860px) {
